@@ -32,10 +32,9 @@ jobs:
           #   goos: linux
           #   goarch: amd64
           #   flags: ""
-          - os: ubuntu-latest
+          - os: ubuntu20.04
             goos: linux
             goarch: arm64
-            flags: CC=gcc-aarch64-linux-gnu
           # - os: macos-latest
           #   goos: darwin
           #   goarch: amd64
@@ -46,18 +45,23 @@ jobs:
           #   goos: windows
           #   goarch: amd64
     steps:
-      - name: Install arm support
-        if: matrix.config.goos == 'linux' && matrix.config.goarch == 'arm64'
-        run: |
-          sudo apt update
-          sudo apt install -y gcc-aarch64-linux-gnu
       - uses: actions/checkout@v2
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
           go-version: '1.18.0'
       - name: Run build
+        if: matrix.config.goos != 'linux' && matrix.config.goarch != 'arm64'
         run: CGO_ENABLED=1 GOOS=${{ matrix.config.goos }} GOARCH=${{ matrix.config.goarch }} ${{ matrix.config.flags }} go build .
+      - uses: uraimo/run-on-arch-action@v2
+        if: matrix.config.goos == 'linux' && matrix.config.goarch == 'arm64'
+        name: Run commands
+        id: runcmd
+        with:
+          arch: aarch64
+          distro: ubuntu20.04
+          githubToken: ${{ github.token }}
+          run: CGO_ENABLED=1 GOOS=${{ matrix.config.goos }} GOARCH=${{ matrix.config.goarch }} ${{ matrix.config.flags }} go build .
       - name: Upload release assets
         uses: actions/upload-release-asset@v1
         env:
