@@ -28,10 +28,10 @@ jobs:
     strategy:
       matrix:
         config:
-          - os: ubuntu-latest
-            goos: linux
-            goarch: amd64
-            flags: ""
+          # - os: ubuntu-latest
+          #   goos: linux
+          #   goarch: amd64
+          #   flags: ""
           - os: ubuntu-latest
             goos: linux
             goarch: arm64
@@ -48,7 +48,9 @@ jobs:
     steps:
       - name: Install arm support
         if: matrix.config.goos == 'linux' && matrix.config.goarch == 'arm64'
-        run: sudo apt install gcc-aarch64-linux-gnu
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-aarch64-linux-gnu
       - uses: actions/checkout@v2
       - name: Setup Go
         uses: actions/setup-go@v2
