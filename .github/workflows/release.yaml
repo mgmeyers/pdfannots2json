@@ -31,9 +31,11 @@ jobs:
           - os: ubuntu-latest
             goos: linux
             goarch: amd64
+            flags: ""
           - os: ubuntu-latest
             goos: linux
             goarch: arm64
+            flags: CC=gcc-aarch64-linux-gnu
           # - os: macos-latest
           #   goos: darwin
           #   goarch: amd64
@@ -44,13 +46,16 @@ jobs:
           #   goos: windows
           #   goarch: amd64
     steps:
+      - name: Install arm support
+        if: matrix.config.goos == 'linux' && matrix.config.goarch == 'arm64'
+        run: sudo apt install gcc-aarch64-linux-gnu
       - uses: actions/checkout@v2
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
           go-version: '1.18.0'
       - name: Run build
-        run: CGO_ENABLED=1 GOOS=${{ matrix.config.goos }} GOARCH=${{ matrix.config.goarch }} go build .
+        run: CGO_ENABLED=1 GOOS=${{ matrix.config.goos }} GOARCH=${{ matrix.config.goarch }} ${{ matrix.config.flags }} go build .
       - name: Upload release assets
         uses: actions/upload-release-asset@v1
         env:
