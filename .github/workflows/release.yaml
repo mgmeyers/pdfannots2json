@@ -3,22 +3,42 @@ on:
     types: [created]
 
 jobs:
-  releases-matrix:
-    name: Release Go Binary
-    runs-on: ubuntu-latest
+  release_assets:
+    name: Release assets
+    needs: create_release # we need to know the upload URL
+    runs-on: ${{ matrix.config.os }} # we run many different builds
     strategy:
       matrix:
-        goos: [linux, windows, darwin]
-        goarch: ["386", amd64, arm64]
-        exclude:
-          - goarch: "386"
-            goos: darwin
-          - goarch: arm64
-            goos: windows
+        config:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+          # - os: macos-latest
+          #   goos: darwin
+          #   goarch: amd64
+          # - os: macos-latest
+          #   goos: darwin
+          #   goarch: arm64
+          # - os: windows-latest
+          #   goos: windows
+          #   goarch: amd64
     steps:
-    - uses: actions/checkout@v2
-    - uses: wangyoucao577/go-release-action@v1.25
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        goos: ${{ matrix.goos }}
-        goarch: ${{ matrix.goarch }}
+      - uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.18.0'
+      - name: Run build
+        run: CGO_ENABLED=1 GOOS=${{ matrix.config.goos }} GOARCH=${{ matrix.config.goarch }} go build .
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_name: pdf-annots2json-${{ matrix.config.goos }}-${{ matrix.config.goarch }}
+          asset_path: ./pdf-annots2json
+          asset_content_type: application/octet-stream
