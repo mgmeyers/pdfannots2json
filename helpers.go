@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/mgmeyers/unipdf/v3/model"
@@ -16,10 +17,20 @@ func endIfErr(e error) {
 }
 
 const dateFormat = "D:20060102150405+07'00'"
+const dateFormatZ = "D:20060102150405Z07'00'"
+const dateFormatNoZ = "D:20060102150405"
 
 func getDate(annot *model.PdfAnnotation) time.Time {
 	dateStr := annot.M
 	date, err := time.Parse(dateFormat, dateStr.String())
+
+	if err != nil {
+		date, err = time.Parse(dateFormatZ, dateStr.String())
+	}
+
+	if err != nil {
+		date, err = time.Parse(dateFormatNoZ, strings.Replace(dateStr.String(), "Z00'00'", "", 1))
+	}
 
 	endIfErr(err)
 
