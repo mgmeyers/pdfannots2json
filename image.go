@@ -44,12 +44,14 @@ func handleImageAnnot(
 	cropped, err := cropImage(pageImg, crop)
 	endIfErr(err)
 
-	writeImage(
-		args.ImageFormat,
-		cropped,
-		imagePath,
-		args.ImageQuality,
-	)
+	if args.NoWrite != true {
+		writeImage(
+			args.ImageFormat,
+			cropped,
+			imagePath,
+			args.ImageQuality,
+		)
+	}
 
 	comment := ""
 

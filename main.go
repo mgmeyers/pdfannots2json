@@ -16,6 +16,7 @@ import (
 )
 
 var args struct {
+	NoWrite         bool   `short:"w" help:"Do not save images to disk"`
 	ImageOutputPath string `short:"o" type:"path" help:"Output path of image annotations"`
 	ImageBaseName   string `short:"n" help:"Base name of saved images"`
 	ImageFormat     string `short:"f" enum:"jpg,png" default:"jpg" help:"Image format. Supports png and jpg"`
@@ -28,13 +29,13 @@ var args struct {
 }
 
 const (
-	Highlight  string = "highlight"
-	Strike            = "strike"
-	Underline         = "underline"
-	Text              = "text"
-	Rectangle         = "rectangle"
-	Image             = "image"
-	Unsuported        = "unsupported"
+	Highlight   string = "highlight"
+	Strike             = "strike"
+	Underline          = "underline"
+	Text               = "text"
+	Rectangle          = "rectangle"
+	Image              = "image"
+	Unsupported        = "unsupported"
 )
 
 type Annotation struct {
@@ -62,7 +63,6 @@ func main() {
 	skipImages := args.ImageBaseName == "" || args.ImageOutputPath == ""
 
 	f, err := os.Open(args.InputPDF)
-
 	endIfErr(err)
 
 	defer f.Close()
@@ -91,7 +91,6 @@ func main() {
 		if !skipImages {
 			pageImg, err = imgDoc.ImageDPI(i, float64(args.ImageDPI))
 			endIfErr(err)
-
 		}
 
 		annotations, err := page.GetAnnotations()
@@ -131,7 +130,13 @@ func processAnnotations(
 		ctx := annotation.GetContext()
 		annotType := getType(ctx)
 
-		if annotType == Unsuported {
+		if annotType == Unsupported {
+			continue
+		}
+
+		date := getDate(annotation)
+
+		if date.Before(args.IgnoreBefore) {
 			continue
 		}
 
@@ -178,14 +183,14 @@ func processAnnotations(
 		comment := ""
 
 		if annotation.Contents != nil {
-			comment = annotation.Contents.String()
+			comment = removeNul(annotation.Contents.String())
 		}
 
 		annots = append(annots, &Annotation{
 			AnnotatedText: str,
 			Color:         getColor(annotation),
 			Comment:       comment,
-			Date:          getDate(annotation).Format(time.RFC3339),
+			Date:          date.Format(time.RFC3339),
 			Type:          annotType,
 			Page:          pageIndex + 1,
 		})

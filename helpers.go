@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/mgmeyers/unipdf/v3/model"
 )
@@ -29,7 +30,8 @@ func getDate(annot *model.PdfAnnotation) time.Time {
 	}
 
 	if err != nil {
-		date, err = time.Parse(dateFormatNoZ, strings.Replace(dateStr.String(), "Z00'00'", "", 1))
+		split := strings.Split(dateStr.String(), "Z")
+		date, err = time.Parse(dateFormatNoZ, split[0])
 	}
 
 	endIfErr(err)
@@ -50,6 +52,18 @@ func getType(t interface{}) string {
 	case *model.PdfAnnotationText:
 		return Text
 	default:
-		return Unsuported
+		return Unsupported
 	}
+}
+
+func removeNul(str string) string {
+	return strings.Map(func(r rune) rune {
+		if r == unicode.ReplacementChar {
+			return -1
+		}
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, str)
 }

@@ -18,8 +18,16 @@ func toHEXStr(i int) string {
 }
 
 func pdfObjToHex(c core.PdfObject) string {
+	if c == nil {
+		return ""
+	}
+
 	clr, err := c.(*core.PdfObjectArray).ToFloat64Array()
 	endIfErr(err)
+
+	if len(clr) < 3 {
+		return ""
+	}
 
 	return "#" + toHEXStr(int(clr[0]*255)) + toHEXStr(int(clr[1]*255)) + toHEXStr(int(clr[2]*255))
 }
