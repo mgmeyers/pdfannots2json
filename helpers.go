@@ -21,8 +21,13 @@ const dateFormat = "D:20060102150405+07'00'"
 const dateFormatZ = "D:20060102150405Z07'00'"
 const dateFormatNoZ = "D:20060102150405"
 
-func getDate(annot *model.PdfAnnotation) time.Time {
+func getDate(annot *model.PdfAnnotation) *time.Time {
 	dateStr := annot.M
+
+	if dateStr == nil {
+		return nil
+	}
+
 	date, err := time.Parse(dateFormat, dateStr.String())
 
 	if err != nil {
@@ -36,7 +41,7 @@ func getDate(annot *model.PdfAnnotation) time.Time {
 
 	endIfErr(err)
 
-	return date
+	return &date
 }
 
 func getType(t interface{}) string {

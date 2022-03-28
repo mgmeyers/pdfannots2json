@@ -33,6 +33,10 @@ func pdfObjToHex(c core.PdfObject) string {
 }
 
 func getColor(annotation *model.PdfAnnotation) string {
+	if annotation == nil {
+		return ""
+	}
+
 	ctx := annotation.GetContext()
 	annotType := getType(ctx)
 

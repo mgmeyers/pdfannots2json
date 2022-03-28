@@ -65,14 +65,21 @@ func handleImageAnnot(
 		comment = removeNul(annotation.Contents.String())
 	}
 
-	return &Annotation{
+	builtAnnot := &Annotation{
 		Color:     getColor(annotation),
 		Comment:   comment,
-		Date:      getDate(annotation).Format(time.RFC3339),
 		ImagePath: imagePath,
 		Type:      Image,
 		Page:      pageIndex + 1,
 	}
+
+	date := getDate(annotation)
+
+	if date != nil {
+		builtAnnot.Date = date.Format(time.RFC3339)
+	}
+
+	return builtAnnot
 }
 
 type subImager interface {

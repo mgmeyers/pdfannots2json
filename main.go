@@ -127,6 +127,10 @@ func processAnnotations(
 	}
 
 	for _, annotation := range annotations {
+		if annotation == nil {
+			continue
+		}
+
 		ctx := annotation.GetContext()
 		annotType := getType(ctx)
 
@@ -136,7 +140,7 @@ func processAnnotations(
 
 		date := getDate(annotation)
 
-		if date.Before(args.IgnoreBefore) {
+		if date != nil && date.Before(args.IgnoreBefore) {
 			continue
 		}
 
@@ -188,14 +192,19 @@ func processAnnotations(
 			comment = removeNul(annotation.Contents.String())
 		}
 
-		annots = append(annots, &Annotation{
+		builtAnnot := &Annotation{
 			AnnotatedText: str,
 			Color:         getColor(annotation),
 			Comment:       comment,
-			Date:          date.Format(time.RFC3339),
 			Type:          annotType,
 			Page:          pageIndex + 1,
-		})
+		}
+
+		if date != nil {
+			builtAnnot.Date = date.Format(time.RFC3339)
+		}
+
+		annots = append(annots, builtAnnot)
 	}
 
 	return annots
