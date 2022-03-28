@@ -24,6 +24,12 @@ func handleImageAnnot(
 	annotRect, err := ctx.(*model.PdfAnnotationSquare).Rect.(*core.PdfObjectArray).ToFloat64Array()
 	endIfErr(err)
 
+	if args.NoWrite != true {
+		if _, err := os.Stat(args.ImageOutputPath); os.IsNotExist(err) {
+			os.MkdirAll(args.ImageOutputPath, os.ModePerm)
+		}
+	}
+
 	imagePath := fmt.Sprintf(
 		"%s/%s-%d-x%d-y%d.%s",
 		args.ImageOutputPath,
@@ -56,7 +62,7 @@ func handleImageAnnot(
 	comment := ""
 
 	if annotation.Contents != nil {
-		comment = annotation.Contents.String()
+		comment = removeNul(annotation.Contents.String())
 	}
 
 	return &Annotation{

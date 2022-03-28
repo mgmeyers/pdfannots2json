@@ -145,37 +145,39 @@ func processAnnotations(
 			continue
 		}
 
-		annoRects := getAnnotationRects(annotation)
-
-		if annoRects == nil {
-			continue
-		}
-
 		str := ""
 
-		for _, anno := range annoRects {
-			if !anno.IsValid() || anno.IsEmpty() {
+		if annotType != Text {
+			annoRects := getAnnotationRects(annotation)
+
+			if annoRects == nil {
 				continue
 			}
 
-			for i, mark := range markRects {
-				if !mark.IsValid() || mark.IsEmpty() {
+			for _, anno := range annoRects {
+				if !anno.IsValid() || anno.IsEmpty() {
 					continue
 				}
 
-				if anno.Intersects(mark) && isWithinOverlapThresh(anno, mark) {
-					if len(marks[i].Text) > 0 && marks[i].Offset > 0 && len(str) > 0 {
-						prevChar := string(text[marks[i].Offset-1])
-
-						if prevChar == " " || prevChar == "\n" {
-							str += " " + marks[i].Text
-							continue
-						}
-
+				for i, mark := range markRects {
+					if !mark.IsValid() || mark.IsEmpty() {
+						continue
 					}
 
-					str += marks[i].Text
-					continue
+					if anno.Intersects(mark) && isWithinOverlapThresh(anno, mark) {
+						if len(marks[i].Text) > 0 && marks[i].Offset > 0 && len(str) > 0 {
+							prevChar := string(text[marks[i].Offset-1])
+
+							if prevChar == " " || prevChar == "\n" {
+								str += " " + marks[i].Text
+								continue
+							}
+
+						}
+
+						str += marks[i].Text
+						continue
+					}
 				}
 			}
 		}
