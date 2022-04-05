@@ -10,7 +10,7 @@ Supported annotations:
 - rectangle
   - *Note: rectangle annotations are exported as images*
 
-`pdf-annots2json` uses [UniPDF](https://github.com/unidoc/unipdf/tree/v3.9.0/) to extract annotations and [MuPDF](https://mupdf.com/) to extract images from PDFs.
+`pdf-annots2json` uses [UniPDF](https://github.com/unidoc/unipdf/tree/v3.9.0/) to extract annotations and [MuPDF (Fitz)](https://mupdf.com/) to extract images from PDFs.
 
 ```
 Usage: pdf-annots2json <input>
