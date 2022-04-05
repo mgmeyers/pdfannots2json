@@ -48,7 +48,7 @@ func getColor(annotation *model.PdfAnnotation) string {
 	case Underline:
 		return pdfObjToHex(ctx.(*model.PdfAnnotationUnderline).C)
 	case Rectangle:
-		return pdfObjToHex(ctx.(*model.PdfAnnotationSquare).Border)
+		return pdfObjToHex(ctx.(*model.PdfAnnotationSquare).C)
 	case Text:
 		return pdfObjToHex(ctx.(*model.PdfAnnotationText).C)
 	}
