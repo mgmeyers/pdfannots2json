@@ -18,7 +18,7 @@ import (
 var args struct {
 	NoWrite         bool   `short:"w" help:"Do not save images to disk"`
 	ImageOutputPath string `short:"o" type:"path" help:"Output path of image annotations"`
-	ImageBaseName   string `short:"n" help:"Base name of saved images"`
+	ImageBaseName   string `short:"n" default:"annot" help:"Base name of saved images"`
 	ImageFormat     string `short:"f" enum:"jpg,png" default:"jpg" help:"Image format. Supports png and jpg"`
 	ImageDPI        int    `short:"d" default:"120" help:"Image DPI"`
 	ImageQuality    int    `short:"q" default:"90" help:"Image quality. Only applies to jpg images"`
