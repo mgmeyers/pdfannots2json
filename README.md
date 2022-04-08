@@ -98,9 +98,8 @@ Sample output:
 ]
 ```
 
-## Supported platforms
+## Supported platforms (see releases)
 
-- Mac (intel): `pdf-annots2json.darwin.amd64.tar.gz`
-- Mac (M1): `pdf-annots2json.darwin.arm64.tar.gz`
-- Linux (x64): `pdf-annots2json.linux.amd64.tar.gz`
-- Windows (x64): `pdf-annots2json.windows.amd64.zip`
+- Mac (intel, M1)
+- Linux (x64)
+- Windows (x64)
