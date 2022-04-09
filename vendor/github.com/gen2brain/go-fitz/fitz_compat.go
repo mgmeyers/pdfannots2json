@@ -1,3 +1,4 @@
+//go:build compat
 // +build compat
 
 // Package fitz provides wrapper for the [MuPDF](http://mupdf.com/) fitz library
@@ -201,7 +202,7 @@ func (f *Document) ImageDPI(pageNumber int, dpi float64) (image.Image, error) {
 	defer C.fz_drop_device(f.ctx, device)
 
 	drawMatrix := C.fz_identity
-	C.fz_run_page(f.ctx, page, device, &drawMatrix, nil)
+	C.fz_run_page_contents(f.ctx, page, device, &drawMatrix, nil)
 
 	C.fz_close_device(f.ctx, device)
 
@@ -252,7 +253,7 @@ func (f *Document) ImagePNG(pageNumber int, dpi float64) ([]byte, error) {
 	defer C.fz_drop_device(f.ctx, device)
 
 	drawMatrix := C.fz_identity
-	C.fz_run_page(f.ctx, page, device, &drawMatrix, nil)
+	C.fz_run_page_contents(f.ctx, page, device, &drawMatrix, nil)
 
 	C.fz_close_device(f.ctx, device)
 
@@ -294,7 +295,7 @@ func (f *Document) Text(pageNumber int) (string, error) {
 	defer C.fz_drop_device(f.ctx, device)
 
 	var cookie C.fz_cookie
-	C.fz_run_page(f.ctx, page, device, &ctm, &cookie)
+	C.fz_run_page_contents(f.ctx, page, device, &ctm, &cookie)
 
 	C.fz_close_device(f.ctx, device)
 
@@ -335,7 +336,7 @@ func (f *Document) HTML(pageNumber int, header bool) (string, error) {
 	defer C.fz_drop_device(f.ctx, device)
 
 	var cookie C.fz_cookie
-	C.fz_run_page(f.ctx, page, device, &ctm, &cookie)
+	C.fz_run_page_contents(f.ctx, page, device, &ctm, &cookie)
 
 	C.fz_close_device(f.ctx, device)
 
@@ -388,7 +389,7 @@ func (f *Document) SVG(pageNumber int) (string, error) {
 	defer C.fz_drop_device(f.ctx, device)
 
 	var cookie C.fz_cookie
-	C.fz_run_page(f.ctx, page, device, &ctm, &cookie)
+	C.fz_run_page_contents(f.ctx, page, device, &ctm, &cookie)
 
 	C.fz_close_device(f.ctx, device)
 

@@ -5,7 +5,9 @@ import (
 	"image"
 	"io"
 	"log"
+	"math"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -72,10 +74,10 @@ func main() {
 	pdfReader, err := model.NewPdfReader(seeker)
 	endIfErr(err)
 
-	imgDoc, err := fitz.New(args.InputPDF)
+	fitzDoc, err := fitz.New(args.InputPDF)
 	endIfErr(err)
 
-	defer imgDoc.Close()
+	defer fitzDoc.Close()
 
 	numPages, err := pdfReader.GetNumPages()
 	endIfErr(err)
@@ -88,16 +90,15 @@ func main() {
 
 		var pageImg image.Image
 
-		if !skipImages {
-			pageImg, err = imgDoc.ImageDPI(i, float64(args.ImageDPI))
-			endIfErr(err)
-		}
+		pageImg, err = fitzDoc.ImageDPI(i, float64(args.ImageDPI))
+		endIfErr(err)
 
 		annotations, err := page.GetAnnotations()
 		endIfErr(err)
 
-		annots := processAnnotations(i, page, pageImg, annotations, skipImages)
+		annots := processAnnotations(i, page, pageImg, fitzDoc, annotations, skipImages)
 		collectedAnnotations = append(collectedAnnotations, annots...)
+		break
 	}
 
 	logOutput(collectedAnnotations)
@@ -107,10 +108,12 @@ func processAnnotations(
 	pageIndex int,
 	page *model.PdfPage,
 	pageImg image.Image,
+	fitzDoc *fitz.Document,
 	annotations []*model.PdfAnnotation,
 	skipImages bool,
 ) []*Annotation {
 	annots := []*Annotation{}
+	textBoundsScale := float64(pageImg.Bounds().Max.X) / page.MediaBox.Width()
 
 	ext, err := extractor.New(page)
 	endIfErr(err)
@@ -118,7 +121,6 @@ func processAnnotations(
 	txt, _, _, err := ext.ExtractPageText()
 	endIfErr(err)
 
-	text := txt.Text()
 	marks := txt.Marks().Elements()
 	markRects := []r2.Rect{}
 
@@ -163,25 +165,51 @@ func processAnnotations(
 					continue
 				}
 
-				for i, mark := range markRects {
+				bound := r2.EmptyRect()
+				boundSet := false
+
+				for _, mark := range markRects {
 					if !mark.IsValid() || mark.IsEmpty() {
 						continue
 					}
 
 					if anno.Intersects(mark) && isWithinOverlapThresh(anno, mark) {
-						if len(marks[i].Text) > 0 && marks[i].Offset > 0 && len(str) > 0 {
-							prevChar := string(text[marks[i].Offset-1])
-
-							if prevChar == " " || prevChar == "\n" {
-								str += " " + marks[i].Text
-								continue
-							}
-
+						if !boundSet {
+							bound = mark
+							boundSet = true
+						} else {
+							bound.X.Lo = math.Min(bound.X.Lo, mark.X.Lo)
+							bound.Y.Lo = math.Min(bound.Y.Lo, mark.Y.Lo)
+							bound.X.Hi = math.Max(bound.X.Hi, mark.X.Hi)
+							bound.Y.Hi = math.Max(bound.Y.Hi, mark.Y.Hi)
 						}
-
-						str += marks[i].Text
-						continue
 					}
+				}
+
+				bHeight := bound.Y.Hi - bound.Y.Lo
+				diff := (bHeight * 0.6) / 2
+
+				x1 := bound.X.Lo * textBoundsScale
+				y1 := (page.MediaBox.Height() - (bound.Y.Lo + diff)) * textBoundsScale
+				x2 := bound.X.Hi * textBoundsScale
+				y2 := (page.MediaBox.Height() - (bound.Y.Hi - diff)) * textBoundsScale
+
+				annotText, err := fitzDoc.TextByBounds(
+					pageIndex,
+					float64(args.ImageDPI),
+					float32(math.Min(x1, x2)),
+					float32(math.Min(y1, y2)),
+					float32(math.Max(x1, x2)),
+					float32(math.Max(y1, y2)),
+				)
+				endIfErr(err)
+
+				if str == "" {
+					str = annotText
+				} else if strings.HasSuffix(str, " ") {
+					str += annotText
+				} else {
+					str += " " + annotText
 				}
 			}
 		}
@@ -189,6 +217,31 @@ func processAnnotations(
 		comment := ""
 
 		if annotation.Contents != nil {
+			// fmt.Printf("%+v %+v\n", annotation.Contents.String(), utf8.ValidString(annotation.Contents.String()))
+
+			// s := annotation.Contents.String()
+			// fmt.Printf("%q\n", s)
+
+			// if !utf8.ValidString(s) {
+			// 	v := make([]rune, 0, len(s))
+			// 	for i, r := range s {
+			// 		if r == utf8.RuneError {
+			// 			_, size := utf8.DecodeRuneInString(s[i:])
+			// 			if size == 1 {
+			// 				continue
+			// 			}
+			// 		}
+			// 		v = append(v, r)
+			// 	}
+			// 	s = string(v)
+			// }
+			// fmt.Printf("%q\n", s)
+
+			// for i, s := range annotation.Contents.String() {
+			// 	hih := annotation.Contents.String()[i]
+			// fmt.Printf("%+v\n", utf8.ValidString())
+			// }
+
 			comment = removeNul(annotation.Contents.String())
 		}
 

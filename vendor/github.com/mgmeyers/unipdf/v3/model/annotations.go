@@ -716,6 +716,7 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *core.PdfIndire
 	}
 
 	if obj := d.Get("Contents"); obj != nil {
+		fmt.Printf("%+v\n", obj)
 		annot.Contents = obj
 	}
 

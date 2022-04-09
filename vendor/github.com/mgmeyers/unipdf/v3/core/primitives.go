@@ -10,11 +10,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
 	"github.com/mgmeyers/unipdf/v3/common"
 	"github.com/mgmeyers/unipdf/v3/internal/strutils"
+	"github.com/softlandia/cpd"
 )
 
 // PdfObject is an interface which all primitive PDF objects must implement.
@@ -166,6 +168,9 @@ func MakeFloat(val float64) *PdfObjectFloat {
 // NOTE: PDF does not use utf-8 string encoding like Go so `s` will often not be a utf-8 encoded
 // string.
 func MakeString(s string) *PdfObjectString {
+	if s[0] == 0xFE && s[1] == 0xFF {
+		log.Println("Hello?", strutils.StringToUTF16(s), cpd.CodepageAutoDetect([]byte(s)))
+	}
 	str := PdfObjectString{val: s}
 	return &str
 }
