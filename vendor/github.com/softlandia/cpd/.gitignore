@@ -1,0 +1,6 @@
+*.zip
+*.7z
+.idea/*
+tmp*
+~*
+*.exe

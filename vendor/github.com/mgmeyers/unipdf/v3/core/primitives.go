@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -168,10 +167,16 @@ func MakeFloat(val float64) *PdfObjectFloat {
 // NOTE: PDF does not use utf-8 string encoding like Go so `s` will often not be a utf-8 encoded
 // string.
 func MakeString(s string) *PdfObjectString {
-	if s[0] == 0xFE && s[1] == 0xFF {
-		log.Println("Hello?", strutils.StringToUTF16(s), cpd.CodepageAutoDetect([]byte(s)))
-	}
 	str := PdfObjectString{val: s}
+
+	if s[0] == 0xFE && s[1] == 0xFF {
+		decoded := cpd.DecodeUTF16be(s)
+		str = PdfObjectString{val: decoded}
+	} else if s[0] == 0xFF && s[1] == 0xFE {
+		decoded := cpd.DecodeUTF16le(s)
+		str = PdfObjectString{val: decoded}
+	}
+
 	return &str
 }
 

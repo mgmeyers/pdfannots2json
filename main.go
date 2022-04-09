@@ -90,15 +90,16 @@ func main() {
 
 		var pageImg image.Image
 
-		pageImg, err = fitzDoc.ImageDPI(i, float64(args.ImageDPI))
-		endIfErr(err)
+		if !skipImages {
+			pageImg, err = fitzDoc.ImageDPI(i, float64(args.ImageDPI))
+			endIfErr(err)
+		}
 
 		annotations, err := page.GetAnnotations()
 		endIfErr(err)
 
 		annots := processAnnotations(i, page, pageImg, fitzDoc, annotations, skipImages)
 		collectedAnnotations = append(collectedAnnotations, annots...)
-		break
 	}
 
 	logOutput(collectedAnnotations)
@@ -113,7 +114,6 @@ func processAnnotations(
 	skipImages bool,
 ) []*Annotation {
 	annots := []*Annotation{}
-	textBoundsScale := float64(pageImg.Bounds().Max.X) / page.MediaBox.Width()
 
 	ext, err := extractor.New(page)
 	endIfErr(err)
@@ -189,14 +189,14 @@ func processAnnotations(
 				bHeight := bound.Y.Hi - bound.Y.Lo
 				diff := (bHeight * 0.6) / 2
 
-				x1 := bound.X.Lo * textBoundsScale
-				y1 := (page.MediaBox.Height() - (bound.Y.Lo + diff)) * textBoundsScale
-				x2 := bound.X.Hi * textBoundsScale
-				y2 := (page.MediaBox.Height() - (bound.Y.Hi - diff)) * textBoundsScale
+				x1 := bound.X.Lo
+				y1 := (page.MediaBox.Height() - (bound.Y.Lo + diff))
+				x2 := bound.X.Hi
+				y2 := (page.MediaBox.Height() - (bound.Y.Hi - diff))
 
 				annotText, err := fitzDoc.TextByBounds(
 					pageIndex,
-					float64(args.ImageDPI),
+					72.0,
 					float32(math.Min(x1, x2)),
 					float32(math.Min(y1, y2)),
 					float32(math.Max(x1, x2)),
