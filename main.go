@@ -46,6 +46,7 @@ const (
 type Annotation struct {
 	AnnotatedText string `json:"annotatedText,omitempty"`
 	Color         string `json:"color,omitempty"`
+	ColorCategory string `json:"colorCategory,omitempty"`
 	Comment       string `json:"comment,omitempty"`
 	Date          string `json:"date,omitempty"`
 	ImagePath     string `json:"imagePath,omitempty"`
@@ -228,6 +229,7 @@ func processAnnotations(
 		builtAnnot := &Annotation{
 			AnnotatedText: str,
 			Color:         getColor(annotation),
+			ColorCategory: getColorCategory(annotation),
 			Comment:       comment,
 			Type:          annotType,
 			Page:          pageIndex + 1,

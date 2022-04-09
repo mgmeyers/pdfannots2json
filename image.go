@@ -66,11 +66,12 @@ func handleImageAnnot(
 	}
 
 	builtAnnot := &Annotation{
-		Color:     getColor(annotation),
-		Comment:   comment,
-		ImagePath: imagePath,
-		Type:      Image,
-		Page:      pageIndex + 1,
+		Color:         getColor(annotation),
+		ColorCategory: getColorCategory(annotation),
+		Comment:       comment,
+		ImagePath:     imagePath,
+		Type:          Image,
+		Page:          pageIndex + 1,
 	}
 
 	date := getDate(annotation)
