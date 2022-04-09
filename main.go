@@ -17,13 +17,16 @@ import (
 	"github.com/mgmeyers/unipdf/v3/model"
 )
 
+const version = "v0.1.0"
+
 var args struct {
-	NoWrite         bool   `short:"w" help:"Do not save images to disk"`
-	ImageOutputPath string `short:"o" type:"path" help:"Output path of image annotations"`
-	ImageBaseName   string `short:"n" default:"annot" help:"Base name of saved images"`
-	ImageFormat     string `short:"f" enum:"jpg,png" default:"jpg" help:"Image format. Supports png and jpg"`
-	ImageDPI        int    `short:"d" default:"120" help:"Image DPI"`
-	ImageQuality    int    `short:"q" default:"90" help:"Image quality. Only applies to jpg images"`
+	Version         kong.VersionFlag `short:"v" help:"Display the current version of pdf-annots2json"`
+	NoWrite         bool             `short:"w" help:"Do not save images to disk"`
+	ImageOutputPath string           `short:"o" type:"path" help:"Output path of image annotations"`
+	ImageBaseName   string           `short:"n" default:"annot" help:"Base name of saved images"`
+	ImageFormat     string           `short:"f" enum:"jpg,png" default:"jpg" help:"Image format. Supports png and jpg"`
+	ImageDPI        int              `short:"d" default:"120" help:"Image DPI"`
+	ImageQuality    int              `short:"q" default:"90" help:"Image quality. Only applies to jpg images"`
 
 	IgnoreBefore time.Time `short:"b" help:"Ignore annotations added before this date. Must be ISO 8601 formatted"`
 
@@ -60,7 +63,9 @@ func logOutput(annots []*Annotation) {
 }
 
 func main() {
-	kong.Parse(&args)
+	kong.Parse(&args, kong.Vars{
+		"version": version,
+	})
 
 	skipImages := args.ImageBaseName == "" || args.ImageOutputPath == ""
 
@@ -217,31 +222,6 @@ func processAnnotations(
 		comment := ""
 
 		if annotation.Contents != nil {
-			// fmt.Printf("%+v %+v\n", annotation.Contents.String(), utf8.ValidString(annotation.Contents.String()))
-
-			// s := annotation.Contents.String()
-			// fmt.Printf("%q\n", s)
-
-			// if !utf8.ValidString(s) {
-			// 	v := make([]rune, 0, len(s))
-			// 	for i, r := range s {
-			// 		if r == utf8.RuneError {
-			// 			_, size := utf8.DecodeRuneInString(s[i:])
-			// 			if size == 1 {
-			// 				continue
-			// 			}
-			// 		}
-			// 		v = append(v, r)
-			// 	}
-			// 	s = string(v)
-			// }
-			// fmt.Printf("%q\n", s)
-
-			// for i, s := range annotation.Contents.String() {
-			// 	hih := annotation.Contents.String()[i]
-			// fmt.Printf("%+v\n", utf8.ValidString())
-			// }
-
 			comment = removeNul(annotation.Contents.String())
 		}
 
