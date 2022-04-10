@@ -21,7 +21,12 @@ func handleImageAnnot(
 ) *Annotation {
 	ctx := annotation.GetContext()
 	scale := float64(pageImg.Bounds().Max.X) / page.MediaBox.Width()
-	annotRect, err := ctx.(*model.PdfAnnotationSquare).Rect.(*core.PdfObjectArray).ToFloat64Array()
+	objArr, ok := ctx.(*model.PdfAnnotationSquare).Rect.(*core.PdfObjectArray)
+	if !ok {
+		return nil
+	}
+
+	annotRect, err := objArr.ToFloat64Array()
 	endIfErr(err)
 
 	if args.NoWrite != true {

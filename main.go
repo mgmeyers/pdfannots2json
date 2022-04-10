@@ -17,7 +17,7 @@ import (
 	"github.com/mgmeyers/unipdf/v3/model"
 )
 
-const version = "v0.1.0"
+const version = "v0.1.1"
 
 var args struct {
 	Version         kong.VersionFlag `short:"v" help:"Display the current version of pdf-annots2json"`

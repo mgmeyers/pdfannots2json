@@ -80,11 +80,20 @@ func getQuadPoint(annotation *model.PdfAnnotation) *core.PdfObjectArray {
 
 	switch annotType {
 	case Highlight:
-		return ctx.(*model.PdfAnnotationHighlight).QuadPoints.(*core.PdfObjectArray)
+		if qp, ok := ctx.(*model.PdfAnnotationHighlight).QuadPoints.(*core.PdfObjectArray); ok {
+			return qp
+		}
+		break
 	case Strike:
-		return ctx.(*model.PdfAnnotationStrikeOut).QuadPoints.(*core.PdfObjectArray)
+		if qp, ok := ctx.(*model.PdfAnnotationStrikeOut).QuadPoints.(*core.PdfObjectArray); ok {
+			return qp
+		}
+		break
 	case Underline:
-		return ctx.(*model.PdfAnnotationUnderline).QuadPoints.(*core.PdfObjectArray)
+		if qp, ok := ctx.(*model.PdfAnnotationUnderline).QuadPoints.(*core.PdfObjectArray); ok {
+			return qp
+		}
+		break
 	}
 
 	return nil

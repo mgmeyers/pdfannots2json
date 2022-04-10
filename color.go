@@ -23,7 +23,12 @@ func pdfObjToHex(c core.PdfObject) string {
 		return ""
 	}
 
-	clr, err := c.(*core.PdfObjectArray).ToFloat64Array()
+	objArr, ok := c.(*core.PdfObjectArray)
+	if !ok {
+		return ""
+	}
+
+	clr, err := objArr.ToFloat64Array()
 	endIfErr(err)
 
 	if len(clr) < 3 {
@@ -86,7 +91,12 @@ func pdfObjToColorCategory(c core.PdfObject) string {
 		return ""
 	}
 
-	clr, err := c.(*core.PdfObjectArray).ToFloat64Array()
+	objArr, ok := c.(*core.PdfObjectArray)
+	if !ok {
+		return ""
+	}
+
+	clr, err := objArr.ToFloat64Array()
 	endIfErr(err)
 
 	if len(clr) < 3 {
