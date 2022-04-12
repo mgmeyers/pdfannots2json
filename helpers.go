@@ -1,14 +1,28 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
+	"math"
 	"os"
 	"strings"
 	"time"
 	"unicode"
 
+	"github.com/gen2brain/go-fitz"
+	"github.com/golang/geo/r2"
 	"github.com/mgmeyers/unipdf/v3/model"
 )
+
+func logOutput(annots []*Annotation) {
+	jsonAnnots, err := json.Marshal(annots)
+
+	endIfErr(err)
+
+	oLog := log.New(os.Stdout, "", 0)
+	oLog.Println(string(jsonAnnots))
+}
 
 func endIfErr(e error) {
 	if e != nil {
@@ -71,4 +85,42 @@ func removeNul(str string) string {
 		}
 		return r
 	}, str)
+}
+
+func getTextByAnnotBounds(fitzDoc *fitz.Document, pageIndex int, page *model.PdfPage, bounds r2.Rect) string {
+	bHeight := bounds.Y.Hi - bounds.Y.Lo
+	diff := (bHeight * 0.6) / 2
+
+	x1 := bounds.X.Lo
+	y1 := (page.MediaBox.Height() - (bounds.Y.Lo + diff))
+	x2 := bounds.X.Hi
+	y2 := (page.MediaBox.Height() - (bounds.Y.Hi - diff))
+
+	annotText, err := fitzDoc.TextByBounds(
+		pageIndex,
+		72.0,
+		float32(math.Min(x1, x2)),
+		float32(math.Min(y1, y2)),
+		float32(math.Max(x1, x2)),
+		float32(math.Max(y1, y2)),
+	)
+	endIfErr(err)
+
+	return annotText
+}
+
+func getID(ids map[string]bool, pageIndex int, x float64, y float64, annotType string) string {
+	xInt := int(x)
+	yInt := int(y)
+	id := fmt.Sprintf("%s-p%dx%dy%d", annotType, pageIndex+1, xInt, yInt)
+	_, ok := ids[id]
+
+	for i := 1; ok; i++ {
+		id = fmt.Sprintf("%s-p%dx%dy%d-%d", annotType, pageIndex+1, xInt, yInt, i)
+		_, ok = ids[id]
+	}
+
+	ids[id] = true
+
+	return id
 }

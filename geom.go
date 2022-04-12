@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math"
+
 	"github.com/golang/geo/r2"
 	"github.com/mgmeyers/unipdf/v3/core"
 	"github.com/mgmeyers/unipdf/v3/extractor"
@@ -97,4 +99,40 @@ func getQuadPoint(annotation *model.PdfAnnotation) *core.PdfObjectArray {
 	}
 
 	return nil
+}
+
+func getCoordinates(annotation *model.PdfAnnotation) (float64, float64) {
+	objArr := annotation.Rect.(*core.PdfObjectArray)
+	annotRect, err := objArr.ToFloat64Array()
+	endIfErr(err)
+
+	x := math.Round(math.Min(annotRect[0], annotRect[2])*100) / 100
+	y := math.Round(math.Min(annotRect[1], annotRect[3])*100) / 100
+
+	return x, y
+}
+
+func getBoundsFromAnnotMarks(annotRect r2.Rect, markRects []r2.Rect) r2.Rect {
+	bound := r2.EmptyRect()
+	boundSet := false
+
+	for _, mark := range markRects {
+		if !mark.IsValid() || mark.IsEmpty() {
+			continue
+		}
+
+		if annotRect.Intersects(mark) && isWithinOverlapThresh(annotRect, mark) {
+			if !boundSet {
+				bound = mark
+				boundSet = true
+			} else {
+				bound.X.Lo = math.Min(bound.X.Lo, mark.X.Lo)
+				bound.Y.Lo = math.Min(bound.Y.Lo, mark.Y.Lo)
+				bound.X.Hi = math.Max(bound.X.Hi, mark.X.Hi)
+				bound.Y.Hi = math.Max(bound.Y.Hi, mark.Y.Hi)
+			}
+		}
+	}
+
+	return bound
 }

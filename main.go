@@ -1,11 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"image"
 	"io"
-	"log"
-	"math"
 	"os"
 	"strings"
 	"time"
@@ -17,7 +14,7 @@ import (
 	"github.com/mgmeyers/unipdf/v3/model"
 )
 
-const version = "v0.1.1"
+const version = "v0.1.2"
 
 var args struct {
 	Version         kong.VersionFlag `short:"v" help:"Display the current version of pdf-annots2json"`
@@ -44,23 +41,17 @@ const (
 )
 
 type Annotation struct {
-	AnnotatedText string `json:"annotatedText,omitempty"`
-	Color         string `json:"color,omitempty"`
-	ColorCategory string `json:"colorCategory,omitempty"`
-	Comment       string `json:"comment,omitempty"`
-	Date          string `json:"date,omitempty"`
-	ImagePath     string `json:"imagePath,omitempty"`
-	Type          string `json:"type"`
-	Page          int    `json:"page"`
-}
-
-func logOutput(annots []*Annotation) {
-	jsonAnnots, err := json.Marshal(annots)
-
-	endIfErr(err)
-
-	oLog := log.New(os.Stdout, "", 0)
-	oLog.Println(string(jsonAnnots))
+	AnnotatedText string  `json:"annotatedText,omitempty"`
+	Color         string  `json:"color,omitempty"`
+	ColorCategory string  `json:"colorCategory,omitempty"`
+	Comment       string  `json:"comment,omitempty"`
+	Date          string  `json:"date,omitempty"`
+	ImagePath     string  `json:"imagePath,omitempty"`
+	Type          string  `json:"type"`
+	Page          int     `json:"page"`
+	X             float64 `json:"x"`
+	Y             float64 `json:"y"`
+	ID            string  `json:"id"`
 }
 
 func main() {
@@ -72,7 +63,6 @@ func main() {
 
 	f, err := os.Open(args.InputPDF)
 	endIfErr(err)
-
 	defer f.Close()
 
 	seeker := io.ReadSeeker(f)
@@ -82,7 +72,6 @@ func main() {
 
 	fitzDoc, err := fitz.New(args.InputPDF)
 	endIfErr(err)
-
 	defer fitzDoc.Close()
 
 	numPages, err := pdfReader.GetNumPages()
@@ -120,6 +109,7 @@ func processAnnotations(
 	skipImages bool,
 ) []*Annotation {
 	annots := []*Annotation{}
+	seenIDs := map[string]bool{}
 
 	ext, err := extractor.New(page)
 	endIfErr(err)
@@ -139,21 +129,18 @@ func processAnnotations(
 			continue
 		}
 
-		ctx := annotation.GetContext()
-		annotType := getType(ctx)
-
+		annotType := getType(annotation.GetContext())
 		if annotType == Unsupported {
 			continue
 		}
 
 		date := getDate(annotation)
-
 		if date != nil && date.Before(args.IgnoreBefore) {
 			continue
 		}
 
 		if !skipImages && annotType == Rectangle {
-			annots = append(annots, handleImageAnnot(pageIndex, page, pageImg, annotation))
+			annots = append(annots, handleImageAnnot(seenIDs, pageIndex, page, pageImg, annotation))
 			continue
 		}
 
@@ -171,44 +158,8 @@ func processAnnotations(
 					continue
 				}
 
-				bound := r2.EmptyRect()
-				boundSet := false
-
-				for _, mark := range markRects {
-					if !mark.IsValid() || mark.IsEmpty() {
-						continue
-					}
-
-					if anno.Intersects(mark) && isWithinOverlapThresh(anno, mark) {
-						if !boundSet {
-							bound = mark
-							boundSet = true
-						} else {
-							bound.X.Lo = math.Min(bound.X.Lo, mark.X.Lo)
-							bound.Y.Lo = math.Min(bound.Y.Lo, mark.Y.Lo)
-							bound.X.Hi = math.Max(bound.X.Hi, mark.X.Hi)
-							bound.Y.Hi = math.Max(bound.Y.Hi, mark.Y.Hi)
-						}
-					}
-				}
-
-				bHeight := bound.Y.Hi - bound.Y.Lo
-				diff := (bHeight * 0.6) / 2
-
-				x1 := bound.X.Lo
-				y1 := (page.MediaBox.Height() - (bound.Y.Lo + diff))
-				x2 := bound.X.Hi
-				y2 := (page.MediaBox.Height() - (bound.Y.Hi - diff))
-
-				annotText, err := fitzDoc.TextByBounds(
-					pageIndex,
-					72.0,
-					float32(math.Min(x1, x2)),
-					float32(math.Min(y1, y2)),
-					float32(math.Max(x1, x2)),
-					float32(math.Max(y1, y2)),
-				)
-				endIfErr(err)
+				bounds := getBoundsFromAnnotMarks(anno, markRects)
+				annotText := getTextByAnnotBounds(fitzDoc, pageIndex, page, bounds)
 
 				if str == "" {
 					str = annotText
@@ -226,6 +177,9 @@ func processAnnotations(
 			comment = removeNul(annotation.Contents.String())
 		}
 
+		x, y := getCoordinates(annotation)
+		id := getID(seenIDs, pageIndex, x, y, annotType)
+
 		builtAnnot := &Annotation{
 			AnnotatedText: str,
 			Color:         getColor(annotation),
@@ -233,6 +187,9 @@ func processAnnotations(
 			Comment:       comment,
 			Type:          annotType,
 			Page:          pageIndex + 1,
+			X:             x,
+			Y:             y,
+			ID:            id,
 		}
 
 		if date != nil {

@@ -14,6 +14,7 @@ import (
 )
 
 func handleImageAnnot(
+	seenIDs map[string]bool,
 	pageIndex int,
 	page *model.PdfPage,
 	pageImg image.Image,
@@ -34,6 +35,8 @@ func handleImageAnnot(
 			os.MkdirAll(args.ImageOutputPath, os.ModePerm)
 		}
 	}
+
+	x, y := getCoordinates(annotation)
 
 	imagePath := fmt.Sprintf(
 		"%s/%s-%d-x%d-y%d.%s",
@@ -70,6 +73,8 @@ func handleImageAnnot(
 		comment = removeNul(annotation.Contents.String())
 	}
 
+	id := getID(seenIDs, pageIndex, x, y, Image)
+
 	builtAnnot := &Annotation{
 		Color:         getColor(annotation),
 		ColorCategory: getColorCategory(annotation),
@@ -77,6 +82,9 @@ func handleImageAnnot(
 		ImagePath:     imagePath,
 		Type:          Image,
 		Page:          pageIndex + 1,
+		X:             x,
+		Y:             y,
+		ID:            id,
 	}
 
 	date := getDate(annotation)
