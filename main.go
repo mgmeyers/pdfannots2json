@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -12,9 +14,10 @@ import (
 	"github.com/golang/geo/r2"
 	"github.com/mgmeyers/unipdf/v3/extractor"
 	"github.com/mgmeyers/unipdf/v3/model"
+	"golang.org/x/sync/errgroup"
 )
 
-const version = "v0.1.2"
+const version = "v0.1.3"
 
 var args struct {
 	Version         kong.VersionFlag `short:"v" help:"Display the current version of pdf-annots2json"`
@@ -74,30 +77,66 @@ func main() {
 	endIfErr(err)
 	defer fitzDoc.Close()
 
+	encryption := pdfReader.GetEncryptionMethod()
+	if encryption != "" {
+		success, err := pdfReader.Decrypt([]byte{})
+		endIfErr(err)
+
+		if !success {
+			endIfErr(fmt.Errorf("Error: PDF is encrypted, unable to decrypt"))
+		}
+	}
+
 	numPages, err := pdfReader.GetNumPages()
 	endIfErr(err)
 
-	collectedAnnotations := []*Annotation{}
+	collectedAnnotations := make([][]*Annotation, numPages)
+	g := new(errgroup.Group)
+	mu := sync.Mutex{}
 
 	for i := 0; i < numPages; i++ {
-		page, err := pdfReader.GetPage(i + 1)
-		endIfErr(err)
+		index := i
+		g.Go(func() error {
+			page, err := pdfReader.GetPage(index + 1)
+			if err != nil {
+				return err
+			}
 
-		var pageImg image.Image
+			var pageImg image.Image
 
-		if !skipImages {
-			pageImg, err = fitzDoc.ImageDPI(i, float64(args.ImageDPI))
-			endIfErr(err)
-		}
+			if !skipImages {
+				pageImg, err = fitzDoc.ImageDPI(index, float64(args.ImageDPI))
+				if err != nil {
+					return err
+				}
+			}
 
-		annotations, err := page.GetAnnotations()
-		endIfErr(err)
+			mu.Lock()
+			annotations, err := page.GetAnnotations()
+			mu.Unlock()
+			if err != nil {
+				return err
+			}
 
-		annots := processAnnotations(i, page, pageImg, fitzDoc, annotations, skipImages)
-		collectedAnnotations = append(collectedAnnotations, annots...)
+			annots := processAnnotations(index, page, pageImg, fitzDoc, annotations, skipImages)
+			collectedAnnotations[index] = annots
+
+			return nil
+		})
 	}
 
-	logOutput(collectedAnnotations)
+	err = g.Wait()
+	endIfErr(err)
+
+	ordered := []*Annotation{}
+
+	for _, annots := range collectedAnnotations {
+		if annots != nil && len(annots) > 0 {
+			ordered = append(ordered, annots...)
+		}
+	}
+
+	logOutput(ordered)
 }
 
 func processAnnotations(

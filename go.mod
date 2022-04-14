@@ -6,8 +6,9 @@ require (
 	github.com/alecthomas/kong v0.5.0
 	github.com/gen2brain/go-fitz v1.18.0
 	github.com/golang/geo v0.0.0-20210211234256-740aa86cb551
-	github.com/mgmeyers/unipdf/v3 v3.9.0
 	github.com/lucasb-eyer/go-colorful v1.2.0
+	github.com/mgmeyers/unipdf/v3 v3.9.0-1
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 )
 
 require (
