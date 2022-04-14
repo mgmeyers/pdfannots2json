@@ -14,11 +14,13 @@ import (
 )
 
 func handleImageAnnot(
-	seenIDs map[string]bool,
 	pageIndex int,
 	page *model.PdfPage,
 	pageImg image.Image,
 	annotation *model.PdfAnnotation,
+	x float64,
+	y float64,
+	id string,
 ) *Annotation {
 	ctx := annotation.GetContext()
 	scale := float64(pageImg.Bounds().Max.X) / page.MediaBox.Width()
@@ -35,8 +37,6 @@ func handleImageAnnot(
 			os.MkdirAll(args.ImageOutputPath, os.ModePerm)
 		}
 	}
-
-	x, y := getCoordinates(annotation)
 
 	imagePath := fmt.Sprintf(
 		"%s/%s-%d-x%d-y%d.%s",
@@ -72,8 +72,6 @@ func handleImageAnnot(
 	if annotation.Contents != nil {
 		comment = removeNul(annotation.Contents.String())
 	}
-
-	id := getID(seenIDs, pageIndex, x, y, Image)
 
 	builtAnnot := &Annotation{
 		Color:         getColor(annotation),

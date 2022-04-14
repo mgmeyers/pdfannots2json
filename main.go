@@ -17,7 +17,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v0.1.3"
+const version = "v0.1.4"
 
 var args struct {
 	Version         kong.VersionFlag `short:"v" help:"Display the current version of pdf-annots2json"`
@@ -147,7 +147,7 @@ func processAnnotations(
 	annotations []*model.PdfAnnotation,
 	skipImages bool,
 ) []*Annotation {
-	annots := []*Annotation{}
+	annots := make([]*Annotation, len(annotations))
 	seenIDs := map[string]bool{}
 
 	ext, err := extractor.New(page)
@@ -163,80 +163,103 @@ func processAnnotations(
 		markRects = append(markRects, getMarkRect(mark))
 	}
 
-	for _, annotation := range annotations {
+	g := new(errgroup.Group)
+	mu := sync.Mutex{}
+
+	for index, annotation := range annotations {
+		annotation := annotation
+		index := index
+
 		if annotation == nil {
 			continue
 		}
 
-		annotType := getType(annotation.GetContext())
-		if annotType == Unsupported {
-			continue
-		}
-
-		date := getDate(annotation)
-		if date != nil && date.Before(args.IgnoreBefore) {
-			continue
-		}
-
-		if !skipImages && annotType == Rectangle {
-			annots = append(annots, handleImageAnnot(seenIDs, pageIndex, page, pageImg, annotation))
-			continue
-		}
-
-		str := ""
-
-		if annotType != Text {
-			annoRects := getAnnotationRects(annotation)
-
-			if annoRects == nil {
-				continue
+		g.Go(func() error {
+			annotType := getType(annotation.GetContext())
+			if annotType == Unsupported {
+				return nil
 			}
 
-			for _, anno := range annoRects {
-				if !anno.IsValid() || anno.IsEmpty() {
-					continue
+			date := getDate(annotation)
+			if date != nil && date.Before(args.IgnoreBefore) {
+				return nil
+			}
+
+			x, y := getCoordinates(annotation)
+
+			mu.Lock()
+			id := getID(seenIDs, pageIndex, x, y, annotType)
+			mu.Unlock()
+
+			if !skipImages && annotType == Rectangle {
+				annots[index] = handleImageAnnot(pageIndex, page, pageImg, annotation, x, y, id)
+				return nil
+			}
+
+			str := ""
+
+			if annotType != Text {
+				annoRects := getAnnotationRects(annotation)
+
+				if annoRects == nil {
+					return nil
 				}
 
-				bounds := getBoundsFromAnnotMarks(anno, markRects)
-				annotText := getTextByAnnotBounds(fitzDoc, pageIndex, page, bounds)
+				for _, anno := range annoRects {
+					if !anno.IsValid() || anno.IsEmpty() {
+						return nil
+					}
 
-				if str == "" {
-					str = annotText
-				} else if strings.HasSuffix(str, " ") {
-					str += annotText
-				} else {
-					str += " " + annotText
+					bounds := getBoundsFromAnnotMarks(anno, markRects)
+					annotText := getTextByAnnotBounds(fitzDoc, pageIndex, page, bounds)
+
+					if str == "" {
+						str = annotText
+					} else if strings.HasSuffix(str, " ") {
+						str += annotText
+					} else {
+						str += " " + annotText
+					}
 				}
 			}
-		}
 
-		comment := ""
+			comment := ""
 
-		if annotation.Contents != nil {
-			comment = removeNul(annotation.Contents.String())
-		}
+			if annotation.Contents != nil {
+				comment = removeNul(annotation.Contents.String())
+			}
 
-		x, y := getCoordinates(annotation)
-		id := getID(seenIDs, pageIndex, x, y, annotType)
+			builtAnnot := &Annotation{
+				AnnotatedText: str,
+				Color:         getColor(annotation),
+				ColorCategory: getColorCategory(annotation),
+				Comment:       comment,
+				Type:          annotType,
+				Page:          pageIndex + 1,
+				X:             x,
+				Y:             y,
+				ID:            id,
+			}
 
-		builtAnnot := &Annotation{
-			AnnotatedText: str,
-			Color:         getColor(annotation),
-			ColorCategory: getColorCategory(annotation),
-			Comment:       comment,
-			Type:          annotType,
-			Page:          pageIndex + 1,
-			X:             x,
-			Y:             y,
-			ID:            id,
-		}
+			if date != nil {
+				builtAnnot.Date = date.Format(time.RFC3339)
+			}
 
-		if date != nil {
-			builtAnnot.Date = date.Format(time.RFC3339)
-		}
-
-		annots = append(annots, builtAnnot)
+			annots[index] = builtAnnot
+			return nil
+		})
 	}
 
-	return annots
+	err = g.Wait()
+	endIfErr(err)
+
+	filtered := []*Annotation{}
+
+	for _, annot := range annots {
+		if annot != nil {
+			filtered = append(filtered, annot)
+		}
+	}
+
+	return filtered
 }
