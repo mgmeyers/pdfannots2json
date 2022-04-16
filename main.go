@@ -18,7 +18,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v0.2.0"
+const version = "v0.2.1"
 
 var args struct {
 	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdf-annots2json"`
@@ -82,7 +82,7 @@ func main() {
 
 	if args.AttemptOCR {
 		checkForTesseract()
-		validateLang(args.OCRLang)
+		validateLang()
 	}
 
 	skipImages := args.ImageBaseName == "" || args.ImageOutputPath == ""

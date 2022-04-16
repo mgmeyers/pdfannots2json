@@ -4,13 +4,20 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+	"os"
 	"os/exec"
 	"strings"
 )
 
 func checkForTesseract() {
-	_, err := exec.LookPath("tesseract")
-	endIfErr(err)
+	if args.TesseractPath == "" {
+		_, err := exec.LookPath("tesseract")
+		endIfErr(err)
+	} else {
+		if _, err := os.Stat(args.TesseractPath); os.IsNotExist(err) {
+			endIfErr(err)
+		}
+	}
 }
 
 func ocrImage(img image.Image) (string, error) {
@@ -39,10 +46,10 @@ func ocrImage(img image.Image) (string, error) {
 	return condenseSpaces(string(out)), nil
 }
 
-func validateLang(langStr string) {
-	split := strings.Split(langStr, "+")
+func validateLang() {
+	split := strings.Split(args.OCRLang, "+")
 
-	cmd := exec.Command("tesseract", "--list-langs")
+	cmd := exec.Command(args.TesseractPath, "--list-langs")
 	out, err := cmd.CombinedOutput()
 	endIfErr(err)
 
