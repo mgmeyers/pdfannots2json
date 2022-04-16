@@ -9,6 +9,27 @@ import (
 	"github.com/mgmeyers/unipdf/v3/model"
 )
 
+func applyPageRotation(page *model.PdfPage, rect []float64) []float64 {
+	angle := *page.Rotate
+	if angle == 0 {
+		return rect
+	}
+
+	width := page.MediaBox.Width()
+	height := page.MediaBox.Height()
+
+	if angle == 90 {
+		return []float64{rect[1], width - rect[2], rect[3], width - rect[0]}
+	}
+
+	if angle == 270 {
+		return []float64{height - rect[3], rect[0], height - rect[1], rect[2]}
+	}
+
+	// 180
+	return []float64{width - rect[2], height - rect[3], width - rect[0], height - rect[1]}
+}
+
 func isWithinOverlapThresh(annot r2.Rect, mark r2.Rect) bool {
 	markSize := getArea(mark)
 	intersect := getArea(annot.Intersection(mark))
@@ -42,7 +63,7 @@ func getMarkRect(mark extractor.TextMark) r2.Rect {
 	)
 }
 
-func getAnnotationRects(annotation *model.PdfAnnotation) []r2.Rect {
+func getAnnotationRects(page *model.PdfPage, annotation *model.PdfAnnotation) []r2.Rect {
 	qp := getQuadPoint(annotation)
 
 	if qp == nil {

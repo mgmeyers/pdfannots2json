@@ -71,8 +71,8 @@ github.com/stretchr/testify/require
 ## explicit; go 1.11
 github.com/unidoc/unitype
 github.com/unidoc/unitype/internal/strutils
-# golang.org/x/image v0.0.0-20181116024801-cd38e8056d9b
-## explicit
+# golang.org/x/image v0.0.0-20220413100746-70e8d0d3baa9
+## explicit; go 1.12
 golang.org/x/image/tiff/lzw
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit

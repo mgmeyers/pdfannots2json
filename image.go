@@ -14,16 +14,25 @@ import (
 )
 
 func handleImageAnnot(
-	pageIndex int,
 	page *model.PdfPage,
 	pageImg image.Image,
+	pageIndex int,
 	annotation *model.PdfAnnotation,
 	x float64,
 	y float64,
 	id string,
 ) *Annotation {
 	ctx := annotation.GetContext()
-	scale := float64(pageImg.Bounds().Max.X) / page.MediaBox.Width()
+	width := page.MediaBox.Width()
+	height := page.MediaBox.Height()
+
+	if *page.Rotate == 90 || *page.Rotate == 270 {
+		width = page.MediaBox.Height()
+		height = page.MediaBox.Width()
+	}
+
+	scale := float64(pageImg.Bounds().Max.X) / width
+
 	objArr, ok := ctx.(*model.PdfAnnotationSquare).Rect.(*core.PdfObjectArray)
 	if !ok {
 		return nil
@@ -31,6 +40,8 @@ func handleImageAnnot(
 
 	annotRect, err := objArr.ToFloat64Array()
 	endIfErr(err)
+
+	annotRect = applyPageRotation(page, annotRect)
 
 	if args.NoWrite != true {
 		if _, err := os.Stat(args.ImageOutputPath); os.IsNotExist(err) {
@@ -50,9 +61,9 @@ func handleImageAnnot(
 
 	crop := image.Rect(
 		int(math.Round(annotRect[0]*scale)),
-		int(math.Round((page.MediaBox.Height()-annotRect[1])*scale)),
+		int(math.Round((height-annotRect[1])*scale)),
 		int(math.Round(annotRect[2]*scale)),
-		int(math.Round((page.MediaBox.Height()-annotRect[3])*scale)),
+		int(math.Round((height-annotRect[3])*scale)),
 	)
 
 	cropped, err := cropImage(pageImg, crop)
@@ -60,9 +71,9 @@ func handleImageAnnot(
 
 	if args.NoWrite != true {
 		writeImage(
-			args.ImageFormat,
 			cropped,
 			imagePath,
+			args.ImageFormat,
 			args.ImageQuality,
 		)
 	}
@@ -107,7 +118,7 @@ func cropImage(img image.Image, crop image.Rectangle) (image.Image, error) {
 	return simg.SubImage(crop), nil
 }
 
-func writeImage(format string, img image.Image, name string, quality int) error {
+func writeImage(img image.Image, name string, format string, quality int) error {
 	if format == "jpg" {
 		return writeJPGImage(img, name, quality)
 	}

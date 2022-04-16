@@ -17,7 +17,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v0.1.4"
+const version = "v0.1.5"
 
 var args struct {
 	Version         kong.VersionFlag `short:"v" help:"Display the current version of pdf-annots2json"`
@@ -118,7 +118,14 @@ func main() {
 				return err
 			}
 
-			annots := processAnnotations(index, page, pageImg, fitzDoc, annotations, skipImages)
+			annots := processAnnotations(
+				fitzDoc,
+				page,
+				pageImg,
+				index,
+				annotations,
+				skipImages,
+			)
 			collectedAnnotations[index] = annots
 
 			return nil
@@ -140,10 +147,10 @@ func main() {
 }
 
 func processAnnotations(
-	pageIndex int,
+	fitzDoc *fitz.Document,
 	page *model.PdfPage,
 	pageImg image.Image,
-	fitzDoc *fitz.Document,
+	pageIndex int,
 	annotations []*model.PdfAnnotation,
 	skipImages bool,
 ) []*Annotation {
@@ -192,14 +199,14 @@ func processAnnotations(
 			mu.Unlock()
 
 			if !skipImages && annotType == Rectangle {
-				annots[index] = handleImageAnnot(pageIndex, page, pageImg, annotation, x, y, id)
+				annots[index] = handleImageAnnot(page, pageImg, pageIndex, annotation, x, y, id)
 				return nil
 			}
 
 			str := ""
 
 			if annotType != Text {
-				annoRects := getAnnotationRects(annotation)
+				annoRects := getAnnotationRects(page, annotation)
 
 				if annoRects == nil {
 					return nil
@@ -230,7 +237,7 @@ func processAnnotations(
 			}
 
 			builtAnnot := &Annotation{
-				AnnotatedText: str,
+				AnnotatedText: condenseSpaces(str),
 				Color:         getColor(annotation),
 				ColorCategory: getColorCategory(annotation),
 				Comment:       comment,

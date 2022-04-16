@@ -20,7 +20,7 @@ require (
 	github.com/softlandia/cpd v1.0.0 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/unidoc/unitype v0.2.0 // indirect
-	golang.org/x/image v0.0.0-20181116024801-cd38e8056d9b // indirect
+	golang.org/x/image v0.0.0-20220413100746-70e8d0d3baa9 // indirect
 	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect

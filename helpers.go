@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 	"unicode"
@@ -88,13 +89,34 @@ func removeNul(str string) string {
 }
 
 func getTextByAnnotBounds(fitzDoc *fitz.Document, pageIndex int, page *model.PdfPage, bounds r2.Rect) string {
-	bHeight := bounds.Y.Hi - bounds.Y.Lo
-	diff := (bHeight * 0.6) / 2
+	height := page.MediaBox.Height()
 
-	x1 := bounds.X.Lo
-	y1 := (page.MediaBox.Height() - (bounds.Y.Lo + diff))
-	x2 := bounds.X.Hi
-	y2 := (page.MediaBox.Height() - (bounds.Y.Hi - diff))
+	if *page.Rotate == 90 || *page.Rotate == 270 {
+		height = page.MediaBox.Width()
+	}
+
+	rotated := applyPageRotation(page, []float64{bounds.X.Lo, bounds.Y.Lo, bounds.X.Hi, bounds.Y.Hi})
+
+	x1 := rotated[0]
+	y1 := rotated[1]
+	x2 := rotated[2]
+	y2 := rotated[3]
+
+	if *page.Rotate == 0 || *page.Rotate == 180 {
+		bHeight := rotated[3] - rotated[1]
+		yDiff := (bHeight * 0.6) / 2
+		y1 += yDiff
+		y2 -= yDiff
+	} else {
+		bWidth := rotated[2] - rotated[0]
+		xDiff := (bWidth * 0.6) / 2
+		x1 += xDiff
+		x2 -= xDiff
+	}
+
+	// fitz's y-axis is oriented at the top
+	y1 = height - y1
+	y2 = height - y2
 
 	annotText, err := fitzDoc.TextByBounds(
 		pageIndex,
@@ -123,4 +145,10 @@ func getID(ids map[string]bool, pageIndex int, x float64, y float64, annotType s
 	ids[id] = true
 
 	return id
+}
+
+var nlAndSpace = regexp.MustCompile(`[\n\s]+`)
+
+func condenseSpaces(str string) string {
+	return nlAndSpace.ReplaceAllString(str, " ")
 }
