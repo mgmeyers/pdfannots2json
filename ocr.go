@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"image/png"
@@ -10,7 +11,7 @@ import (
 )
 
 func checkForTesseract() {
-	if args.TesseractPath == "" {
+	if args.TesseractPath == "tesseract" {
 		_, err := exec.LookPath("tesseract")
 		endIfErr(err)
 	} else {
@@ -38,12 +39,15 @@ func ocrImage(img image.Image) (string, error) {
 		png.Encode(stdin, img)
 	}()
 
-	out, err := cmd.CombinedOutput()
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err = cmd.Run()
 	if err != nil {
 		return "", err
 	}
 
-	return condenseSpaces(string(out)), nil
+	return condenseSpaces(out.String()), nil
 }
 
 func validateLang() {
