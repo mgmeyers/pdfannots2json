@@ -16,7 +16,11 @@ func checkForTesseract() {
 func ocrImage(img image.Image) (string, error) {
 	tessArgs := []string{"stdin", "stdout", "--dpi", "300", "-l", args.OCRLang}
 
-	cmd := exec.Command("tesseract", tessArgs...)
+	if args.TessDataDir != "" {
+		tessArgs = append(tessArgs, "--tessdata-dir", args.TessDataDir)
+	}
+
+	cmd := exec.Command(args.TesseractPath, tessArgs...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return "", err

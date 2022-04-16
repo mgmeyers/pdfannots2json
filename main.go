@@ -34,6 +34,8 @@ var args struct {
 	ImageQuality    int    `short:"q" default:"90" help:"Image quality. Only applies to jpg images"`
 	AttemptOCR      bool   `short:"e" help:"Attempt to extract text from images. tesseract-ocr must be installed on your system"`
 	OCRLang         string `short:"l" default:"eng" help:"Set the OCR language. Supports multiple languages, eg. 'eng+deu'. The desired languages must be installed"`
+	TesseractPath   string `default:"tesseract" help:"Absolute path to the tesseract executable"`
+	TessDataDir     string `help:"Absolute path to the tesseract data folder"`
 }
 
 const (
