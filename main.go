@@ -5,6 +5,7 @@ import (
 	"image"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -17,20 +18,22 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v0.1.5"
+const version = "v0.2.0"
 
 var args struct {
-	Version         kong.VersionFlag `short:"v" help:"Display the current version of pdf-annots2json"`
-	NoWrite         bool             `short:"w" help:"Do not save images to disk"`
-	ImageOutputPath string           `short:"o" type:"path" help:"Output path of image annotations"`
-	ImageBaseName   string           `short:"n" default:"annot" help:"Base name of saved images"`
-	ImageFormat     string           `short:"f" enum:"jpg,png" default:"jpg" help:"Image format. Supports png and jpg"`
-	ImageDPI        int              `short:"d" default:"120" help:"Image DPI"`
-	ImageQuality    int              `short:"q" default:"90" help:"Image quality. Only applies to jpg images"`
+	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdf-annots2json"`
+	IgnoreBefore time.Time        `short:"b" help:"Ignore annotations added before this date. Must be ISO 8601 formatted"`
+	InputPDF     string           `arg:"" name:"input" help:"Path to input PDF" type:"path"`
 
-	IgnoreBefore time.Time `short:"b" help:"Ignore annotations added before this date. Must be ISO 8601 formatted"`
-
-	InputPDF string `arg:"" name:"input" help:"Path to input PDF" type:"path"`
+	// Images
+	NoWrite         bool   `short:"w" help:"Do not save images to disk"`
+	ImageOutputPath string `short:"o" type:"path" help:"Output path of image annotations"`
+	ImageBaseName   string `short:"n" default:"annot" help:"Base name of saved images"`
+	ImageFormat     string `short:"f" enum:"jpg,png" default:"jpg" help:"Image format. Supports png and jpg"`
+	ImageDPI        int    `short:"d" default:"120" help:"Image DPI"`
+	ImageQuality    int    `short:"q" default:"90" help:"Image quality. Only applies to jpg images"`
+	AttemptOCR      bool   `short:"e" help:"Attempt to extract text from images. tesseract-ocr must be installed on your system"`
+	OCRLang         string `short:"l" default:"eng" help:"Set the OCR language. Supports multiple languages, eg. 'eng+deu'. The desired languages must be installed"`
 }
 
 const (
@@ -49,18 +52,36 @@ type Annotation struct {
 	ColorCategory string  `json:"colorCategory,omitempty"`
 	Comment       string  `json:"comment,omitempty"`
 	Date          string  `json:"date,omitempty"`
+	ID            string  `json:"id"`
 	ImagePath     string  `json:"imagePath,omitempty"`
-	Type          string  `json:"type"`
+	OCRText       string  `json:"ocrText,omitempty"`
 	Page          int     `json:"page"`
+	Type          string  `json:"type"`
 	X             float64 `json:"x"`
 	Y             float64 `json:"y"`
-	ID            string  `json:"id"`
 }
+
+type ByX []*Annotation
+
+func (a ByX) Len() int           { return len(a) }
+func (a ByX) Less(i, j int) bool { return a[i].X < a[j].X }
+func (a ByX) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+
+type ByY []*Annotation
+
+func (a ByY) Len() int           { return len(a) }
+func (a ByY) Less(i, j int) bool { return a[i].Y > a[j].Y }
+func (a ByY) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 func main() {
 	kong.Parse(&args, kong.Vars{
 		"version": version,
 	})
+
+	if args.AttemptOCR {
+		checkForTesseract()
+		validateLang(args.OCRLang)
+	}
 
 	skipImages := args.ImageBaseName == "" || args.ImageOutputPath == ""
 
@@ -103,9 +124,15 @@ func main() {
 			}
 
 			var pageImg image.Image
+			var ocrImg image.Image
 
 			if !skipImages {
 				pageImg, err = fitzDoc.ImageDPI(index, float64(args.ImageDPI))
+				if err != nil {
+					return err
+				}
+
+				ocrImg, err = fitzDoc.ImageDPI(index, 300.0)
 				if err != nil {
 					return err
 				}
@@ -121,7 +148,8 @@ func main() {
 			annots := processAnnotations(
 				fitzDoc,
 				page,
-				pageImg,
+				&pageImg,
+				&ocrImg,
 				index,
 				annotations,
 				skipImages,
@@ -149,7 +177,8 @@ func main() {
 func processAnnotations(
 	fitzDoc *fitz.Document,
 	page *model.PdfPage,
-	pageImg image.Image,
+	pageImg *image.Image,
+	ocrImg *image.Image,
 	pageIndex int,
 	annotations []*model.PdfAnnotation,
 	skipImages bool,
@@ -199,7 +228,7 @@ func processAnnotations(
 			mu.Unlock()
 
 			if !skipImages && annotType == Rectangle {
-				annots[index] = handleImageAnnot(page, pageImg, pageIndex, annotation, x, y, id)
+				annots[index] = handleImageAnnot(page, pageImg, ocrImg, pageIndex, annotation, x, y, id)
 				return nil
 			}
 
@@ -267,6 +296,9 @@ func processAnnotations(
 			filtered = append(filtered, annot)
 		}
 	}
+
+	sort.Sort(ByX(filtered))
+	sort.Sort(ByY(filtered))
 
 	return filtered
 }
