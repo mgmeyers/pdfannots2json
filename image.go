@@ -32,8 +32,6 @@ func handleImageAnnot(
 		height = page.MediaBox.Width()
 	}
 
-	scale := float64((*pageImg).Bounds().Max.X) / width
-
 	objArr, ok := ctx.(*model.PdfAnnotationSquare).Rect.(*core.PdfObjectArray)
 	if !ok {
 		return nil
@@ -60,17 +58,19 @@ func handleImageAnnot(
 		args.ImageFormat,
 	)
 
-	crop := image.Rect(
-		int(math.Round(annotRect[0]*scale)),
-		int(math.Round((height-annotRect[1])*scale)),
-		int(math.Round(annotRect[2]*scale)),
-		int(math.Round((height-annotRect[3])*scale)),
-	)
+	if !args.NoWrite {
+		scale := float64((*pageImg).Bounds().Max.X) / width
 
-	cropped, err := cropImage(pageImg, crop)
-	endIfErr(err)
+		crop := image.Rect(
+			int(math.Round(annotRect[0]*scale)),
+			int(math.Round((height-annotRect[1])*scale)),
+			int(math.Round(annotRect[2]*scale)),
+			int(math.Round((height-annotRect[3])*scale)),
+		)
 
-	if args.NoWrite != true {
+		cropped, err := cropImage(pageImg, crop)
+		endIfErr(err)
+
 		writeImage(
 			&cropped,
 			imagePath,
@@ -86,7 +86,6 @@ func handleImageAnnot(
 	}
 
 	builtAnnot := &Annotation{
-		OCRText:       handleImageOCR(page, ocrImg, annotRect),
 		Color:         getColor(annotation),
 		ColorCategory: getColorCategory(annotation),
 		Comment:       comment,
@@ -102,6 +101,10 @@ func handleImageAnnot(
 
 	if date != nil {
 		builtAnnot.Date = date.Format(time.RFC3339)
+	}
+
+	if args.AttemptOCR {
+		builtAnnot.OCRText = handleImageOCR(page, ocrImg, annotRect)
 	}
 
 	return builtAnnot

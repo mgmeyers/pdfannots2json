@@ -18,7 +18,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v0.2.2"
+const version = "v0.2.3"
 
 var args struct {
 	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdf-annots2json"`
@@ -125,26 +125,51 @@ func main() {
 				return err
 			}
 
-			var pageImg image.Image
-			var ocrImg image.Image
-
-			if !skipImages {
-				pageImg, err = fitzDoc.ImageDPI(index, float64(args.ImageDPI))
-				if err != nil {
-					return err
-				}
-
-				ocrImg, err = fitzDoc.ImageDPI(index, 300.0)
-				if err != nil {
-					return err
-				}
-			}
-
 			mu.Lock()
 			annotations, err := page.GetAnnotations()
 			mu.Unlock()
 			if err != nil {
 				return err
+			}
+
+			if len(annotations) == 0 {
+				return nil
+			}
+
+			haveRectangles := false
+			filtered := []*model.PdfAnnotation{}
+
+			for _, a := range annotations {
+				annotType := getType(a.GetContext())
+
+				if annotType == Unsupported {
+					continue
+				}
+
+				if annotType == Rectangle {
+					haveRectangles = true
+				}
+
+				filtered = append(filtered, a)
+			}
+
+			var pageImg image.Image
+			var ocrImg image.Image
+
+			if haveRectangles && !skipImages {
+				if !args.NoWrite {
+					pageImg, err = fitzDoc.ImageDPI(index, float64(args.ImageDPI))
+					if err != nil {
+						return err
+					}
+				}
+
+				if args.AttemptOCR {
+					ocrImg, err = fitzDoc.ImageDPI(index, 300.0)
+					if err != nil {
+						return err
+					}
+				}
 			}
 
 			annots := processAnnotations(
@@ -153,7 +178,7 @@ func main() {
 				&pageImg,
 				&ocrImg,
 				index,
-				annotations,
+				filtered,
 				skipImages,
 			)
 			collectedAnnotations[index] = annots
