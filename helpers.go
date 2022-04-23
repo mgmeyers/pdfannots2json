@@ -13,6 +13,7 @@ import (
 
 	"github.com/gen2brain/go-fitz"
 	"github.com/golang/geo/r2"
+	"github.com/mgmeyers/unipdf/v3/extractor"
 	"github.com/mgmeyers/unipdf/v3/model"
 )
 
@@ -129,6 +130,46 @@ func getTextByAnnotBounds(fitzDoc *fitz.Document, pageIndex int, page *model.Pdf
 	endIfErr(err)
 
 	return annotText
+}
+
+func getFallbackText(text string, annotRect r2.Rect, markRects []r2.Rect, marks []extractor.TextMark) string {
+	segment := ""
+
+	for i, mark := range markRects {
+		if !mark.IsValid() || mark.IsEmpty() {
+			continue
+		}
+
+		if annotRect.Intersects(mark) && isWithinOverlapThresh(annotRect, mark) {
+			if len(marks[i].Text) > 0 && marks[i].Offset > 0 && len(segment) > 0 {
+				prevChar := string(text[marks[i].Offset-1])
+
+				if prevChar == " " || prevChar == "\n" {
+					segment += " " + marks[i].Text
+					continue
+				}
+
+			}
+
+			segment += marks[i].Text
+			continue
+		}
+	}
+
+	return segment
+}
+
+func shouldUseFallback(str string) bool {
+	length := len(str)
+	missingChars := strings.Count(str, "�")
+
+	if missingChars == 0 {
+		return false
+	}
+
+	ratio := float64(missingChars) / float64(length)
+
+	return ratio > 0.2
 }
 
 func getID(ids map[string]bool, pageIndex int, x float64, y float64, annotType string) string {

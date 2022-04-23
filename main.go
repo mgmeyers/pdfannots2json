@@ -219,6 +219,7 @@ func processAnnotations(
 	txt, _, _, err := ext.ExtractPageText()
 	endIfErr(err)
 
+	text := txt.Text()
 	marks := txt.Marks().Elements()
 	markRects := []r2.Rect{}
 
@@ -260,6 +261,7 @@ func processAnnotations(
 			}
 
 			str := ""
+			fallbackStr := ""
 
 			if annotType != Text {
 				annoRects := getAnnotationRects(page, annotation)
@@ -283,6 +285,16 @@ func processAnnotations(
 					} else {
 						str += " " + annotText
 					}
+
+					fallback := getFallbackText(text, anno, markRects, marks)
+
+					if fallbackStr == "" {
+						fallbackStr = fallback
+					} else if strings.HasSuffix(fallbackStr, " ") {
+						fallbackStr += fallback
+					} else {
+						fallbackStr += " " + fallback
+					}
 				}
 			}
 
@@ -292,8 +304,14 @@ func processAnnotations(
 				comment = removeNul(annotation.Contents.String())
 			}
 
+			annotatedText := str
+
+			if shouldUseFallback(str) {
+				annotatedText = fallbackStr
+			}
+
 			builtAnnot := &Annotation{
-				AnnotatedText: condenseSpaces(str),
+				AnnotatedText: condenseSpaces(annotatedText),
 				Color:         getColor(annotation),
 				ColorCategory: getColorCategory(annotation),
 				Comment:       comment,
