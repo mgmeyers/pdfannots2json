@@ -27,7 +27,7 @@ func handleImageAnnot(
 	width := page.MediaBox.Width()
 	height := page.MediaBox.Height()
 
-	if *page.Rotate == 90 || *page.Rotate == 270 {
+	if page.Rotate != nil && (*page.Rotate == 90 || *page.Rotate == 270) {
 		width = page.MediaBox.Height()
 		height = page.MediaBox.Width()
 	}
@@ -118,7 +118,7 @@ func handleImageOCR(
 	width := page.MediaBox.Width()
 	height := page.MediaBox.Height()
 
-	if *page.Rotate == 90 || *page.Rotate == 270 {
+	if page.Rotate != nil && (*page.Rotate == 90 || *page.Rotate == 270) {
 		width = page.MediaBox.Height()
 		height = page.MediaBox.Width()
 	}

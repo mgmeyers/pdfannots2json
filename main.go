@@ -18,7 +18,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v0.2.4"
+const version = "v1.0.0"
 
 var args struct {
 	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdf-annots2json"`

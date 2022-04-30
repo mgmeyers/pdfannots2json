@@ -92,7 +92,7 @@ func removeNul(str string) string {
 func getTextByAnnotBounds(fitzDoc *fitz.Document, pageIndex int, page *model.PdfPage, bounds r2.Rect) string {
 	height := page.MediaBox.Height()
 
-	if *page.Rotate == 90 || *page.Rotate == 270 {
+	if page.Rotate != nil && (*page.Rotate == 90 || *page.Rotate == 270) {
 		height = page.MediaBox.Width()
 	}
 
@@ -103,7 +103,7 @@ func getTextByAnnotBounds(fitzDoc *fitz.Document, pageIndex int, page *model.Pdf
 	x2 := rotated[2]
 	y2 := rotated[3]
 
-	if *page.Rotate == 0 || *page.Rotate == 180 {
+	if page.Rotate != nil && (*page.Rotate == 0 || *page.Rotate == 180) {
 		bHeight := rotated[3] - rotated[1]
 		yDiff := (bHeight * 0.6) / 2
 		y1 += yDiff

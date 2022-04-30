@@ -10,6 +10,10 @@ import (
 )
 
 func applyPageRotation(page *model.PdfPage, rect []float64) []float64 {
+	if page.Rotate == nil {
+		return rect
+	}
+
 	angle := *page.Rotate
 	if angle == 0 {
 		return rect
