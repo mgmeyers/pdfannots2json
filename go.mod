@@ -1,4 +1,4 @@
-module github.com/mgmeyers/pdf-annots2json
+module github.com/mgmeyers/pdfannots2json
 
 go 1.18
 

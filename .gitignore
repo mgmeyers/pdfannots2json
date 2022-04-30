@@ -16,4 +16,5 @@
 dist
 .DS_Store
 pdf-annots2json
+pdfannots2json
 *.pdf
