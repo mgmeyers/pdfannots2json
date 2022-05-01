@@ -1,4 +1,4 @@
-# pdf-annots2json
+# pdfannots2json
 
 Extracts annotations from PDF and converts them to a JSON list.
 
@@ -10,10 +10,10 @@ Supported annotations:
 - rectangle
   - *Note: rectangle annotations are exported as images*
 
-`pdf-annots2json` uses [UniPDF](https://github.com/unidoc/unipdf/tree/v3.9.0/) to extract annotations and [MuPDF (Fitz)](https://mupdf.com/) to extract images from PDFs.
+`pdfannots2json` uses [UniPDF](https://github.com/unidoc/unipdf/tree/v3.9.0/) to extract annotations and [MuPDF (Fitz)](https://mupdf.com/) to extract images from PDFs.
 
 ```
-Usage: pdf-annots2json <input>
+Usage: pdfannots2json <input>
 
 Arguments:
   <input>    Path to input PDF
@@ -43,7 +43,7 @@ Flags:
 
 ## OCR
 
-Using the `--attempt-ocr` flag instructs `pdf-annots2json` to extract text from the images created by rectangle annotations. This requires that `tesseract` is installed on your system, including the appropriate language data (by default tesseract only support english). Tesseract can be installed from homebrew on mac, various linux package managers, and from here on windows: https://github.com/UB-Mannheim/tesseract/wiki Additional language files can be downloaded here: https://github.com/tesseract-ocr/tessdata (See here for a description of the language codes: https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html)
+Using the `--attempt-ocr` flag instructs `pdfannots2json` to extract text from the images created by rectangle annotations. This requires that `tesseract` is installed on your system, including the appropriate language data (by default tesseract only support english). Tesseract can be installed from homebrew on mac, various linux package managers, and from here on windows: https://github.com/UB-Mannheim/tesseract/wiki Additional language files can be downloaded here: https://github.com/tesseract-ocr/tessdata (See here for a description of the language codes: https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html)
 
 ## Sample output
 

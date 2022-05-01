@@ -18,10 +18,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v1.0.0"
+const version = "v1.0.1"
 
 var args struct {
-	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdf-annots2json"`
+	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdfannots2json"`
 	IgnoreBefore time.Time        `short:"b" help:"Ignore annotations added before this date. Must be ISO 8601 formatted"`
 	InputPDF     string           `arg:"" name:"input" help:"Path to input PDF" type:"path"`
 
