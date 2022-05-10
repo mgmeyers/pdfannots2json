@@ -97,11 +97,12 @@ func (f *Font) GetCmap(platformID, encodingID int) map[rune]GlyphIndex {
 // When a rune is not found, a GID of 0 is used (notdef).
 func (f *Font) LookupRunes(runes []rune) []GlyphIndex {
 	var maps []map[rune]GlyphIndex
-	// Search order (3,1), (1,0), (0,3).
+	// Search order (3,1), (1,0), (0,3), (3,10).
 	maps = append(maps,
 		f.GetCmap(3, 1),
 		f.GetCmap(1, 0),
 		f.GetCmap(0, 3),
+		f.GetCmap(3, 10),
 	)
 
 	var indices []GlyphIndex

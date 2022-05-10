@@ -4,19 +4,16 @@ github.com/alecthomas/kong
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/gen2brain/go-fitz v1.18.0
-## explicit; go 1.16
-github.com/gen2brain/go-fitz
 # github.com/golang/geo v0.0.0-20210211234256-740aa86cb551
 ## explicit; go 1.12
 github.com/golang/geo/r1
 github.com/golang/geo/r2
-# github.com/konsorten/go-windows-terminal-sequences v1.0.3
-## explicit
-github.com/konsorten/go-windows-terminal-sequences
 # github.com/lucasb-eyer/go-colorful v1.2.0
 ## explicit; go 1.12
 github.com/lucasb-eyer/go-colorful
+# github.com/mgmeyers/go-fitz v1.19.2
+## explicit; go 1.16
+github.com/mgmeyers/go-fitz
 # github.com/mgmeyers/unipdf/v3 v3.9.0-1
 ## explicit; go 1.11
 github.com/mgmeyers/unipdf/v3/common
@@ -57,17 +54,17 @@ github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
-# github.com/sirupsen/logrus v1.6.0
+# github.com/sirupsen/logrus v1.8.1
 ## explicit; go 1.13
 github.com/sirupsen/logrus
 # github.com/softlandia/cpd v1.0.0
 ## explicit; go 1.17
 github.com/softlandia/cpd
-# github.com/stretchr/testify v1.7.0
+# github.com/stretchr/testify v1.7.1
 ## explicit; go 1.13
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# github.com/unidoc/unitype v0.2.0
+# github.com/unidoc/unitype v0.2.1
 ## explicit; go 1.11
 github.com/unidoc/unitype
 github.com/unidoc/unitype/internal/strutils
@@ -77,10 +74,11 @@ golang.org/x/image/tiff/lzw
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8
+# golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6
 ## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
+golang.org/x/sys/windows
 # golang.org/x/text v0.3.7
 ## explicit; go 1.17
 golang.org/x/text/encoding
@@ -102,7 +100,7 @@ golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
+# golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f
 ## explicit; go 1.11
 golang.org/x/xerrors
 golang.org/x/xerrors/internal

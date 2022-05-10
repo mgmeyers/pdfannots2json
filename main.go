@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"image"
 	"io"
+	"log"
 	"os"
 	"sort"
 	"strings"
@@ -11,8 +13,9 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
-	"github.com/gen2brain/go-fitz"
 	"github.com/golang/geo/r2"
+	"github.com/mgmeyers/go-fitz"
+	"github.com/mgmeyers/pdfannots2json/pdfutils"
 	"github.com/mgmeyers/unipdf/v3/extractor"
 	"github.com/mgmeyers/unipdf/v3/model"
 	"golang.org/x/sync/errgroup"
@@ -38,42 +41,21 @@ var args struct {
 	TessDataDir     string `help:"Absolute path to the tesseract data folder"`
 }
 
-const (
-	Highlight   string = "highlight"
-	Strike             = "strike"
-	Underline          = "underline"
-	Text               = "text"
-	Rectangle          = "rectangle"
-	Image              = "image"
-	Unsupported        = "unsupported"
-)
+func logOutput(annots []*pdfutils.Annotation) {
+	jsonAnnots, err := json.Marshal(annots)
 
-type Annotation struct {
-	AnnotatedText string  `json:"annotatedText,omitempty"`
-	Color         string  `json:"color,omitempty"`
-	ColorCategory string  `json:"colorCategory,omitempty"`
-	Comment       string  `json:"comment,omitempty"`
-	Date          string  `json:"date,omitempty"`
-	ID            string  `json:"id"`
-	ImagePath     string  `json:"imagePath,omitempty"`
-	OCRText       string  `json:"ocrText,omitempty"`
-	Page          int     `json:"page"`
-	Type          string  `json:"type"`
-	X             float64 `json:"x"`
-	Y             float64 `json:"y"`
+	endIfErr(err)
+
+	oLog := log.New(os.Stdout, "", 0)
+	oLog.Println(string(jsonAnnots))
 }
 
-type ByX []*Annotation
-
-func (a ByX) Len() int           { return len(a) }
-func (a ByX) Less(i, j int) bool { return a[i].X < a[j].X }
-func (a ByX) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-
-type ByY []*Annotation
-
-func (a ByY) Len() int           { return len(a) }
-func (a ByY) Less(i, j int) bool { return a[i].Y > a[j].Y }
-func (a ByY) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func endIfErr(e error) {
+	if e != nil {
+		eLog := log.New(os.Stderr, "", 0)
+		eLog.Fatalln(e)
+	}
+}
 
 func main() {
 	kong.Parse(&args, kong.Vars{
@@ -81,8 +63,15 @@ func main() {
 	})
 
 	if args.AttemptOCR {
-		checkForTesseract()
-		validateLang()
+		haveTess := pdfutils.CheckForTesseract(args.TesseractPath)
+		if !haveTess {
+			endIfErr(fmt.Errorf("Error: %s not found", args.TesseractPath))
+		}
+
+		valid := pdfutils.ValidateLang(args.TesseractPath, args.OCRLang)
+		if !valid {
+			endIfErr(fmt.Errorf("Error: %s not a valid tesseract language string", args.OCRLang))
+		}
 	}
 
 	skipImages := args.ImageBaseName == "" || args.ImageOutputPath == ""
@@ -113,7 +102,7 @@ func main() {
 	numPages, err := pdfReader.GetNumPages()
 	endIfErr(err)
 
-	collectedAnnotations := make([][]*Annotation, numPages)
+	collectedAnnotations := make([][]*pdfutils.Annotation, numPages)
 	g := new(errgroup.Group)
 	mu := sync.Mutex{}
 
@@ -140,13 +129,13 @@ func main() {
 			filtered := []*model.PdfAnnotation{}
 
 			for _, a := range annotations {
-				annotType := getType(a.GetContext())
+				annotType := pdfutils.GetAnnotationType(a.GetContext())
 
-				if annotType == Unsupported {
+				if annotType == pdfutils.Unsupported {
 					continue
 				}
 
-				if annotType == Rectangle {
+				if annotType == pdfutils.Rectangle {
 					haveRectangles = true
 				}
 
@@ -190,7 +179,7 @@ func main() {
 	err = g.Wait()
 	endIfErr(err)
 
-	ordered := []*Annotation{}
+	ordered := []*pdfutils.Annotation{}
 
 	for _, annots := range collectedAnnotations {
 		if annots != nil && len(annots) > 0 {
@@ -209,8 +198,8 @@ func processAnnotations(
 	pageIndex int,
 	annotations []*model.PdfAnnotation,
 	skipImages bool,
-) []*Annotation {
-	annots := make([]*Annotation, len(annotations))
+) []*pdfutils.Annotation {
+	annots := make([]*pdfutils.Annotation, len(annotations))
 	seenIDs := map[string]bool{}
 
 	ext, err := extractor.New(page)
@@ -224,7 +213,7 @@ func processAnnotations(
 	markRects := []r2.Rect{}
 
 	for _, mark := range marks {
-		markRects = append(markRects, getMarkRect(mark))
+		markRects = append(markRects, pdfutils.GetMarkRect(mark))
 	}
 
 	g := new(errgroup.Group)
@@ -239,32 +228,56 @@ func processAnnotations(
 		}
 
 		g.Go(func() error {
-			annotType := getType(annotation.GetContext())
-			if annotType == Unsupported {
+			annotType := pdfutils.GetAnnotationType(annotation.GetContext())
+			if annotType == pdfutils.Unsupported {
 				return nil
 			}
 
-			date := getDate(annotation)
+			date := pdfutils.GetAnnotationDate(annotation)
 			if date != nil && date.Before(args.IgnoreBefore) {
 				return nil
 			}
 
-			x, y := getCoordinates(annotation)
+			x, y := pdfutils.GetCoordinates(annotation)
 
 			mu.Lock()
-			id := getID(seenIDs, pageIndex, x, y, annotType)
+			id := pdfutils.GetAnnotationID(seenIDs, pageIndex, x, y, annotType)
 			mu.Unlock()
 
-			if !skipImages && annotType == Rectangle {
-				annots[index] = handleImageAnnot(page, pageImg, ocrImg, pageIndex, annotation, x, y, id)
+			if !skipImages && annotType == pdfutils.Rectangle {
+				imgAnnot, err := pdfutils.HandleImageAnnot(pdfutils.ImageAnnotArgs{
+					Page:            page,
+					PageImg:         pageImg,
+					PageIndex:       pageIndex,
+					OCRImg:          ocrImg,
+					AttemptOCR:      args.AttemptOCR,
+					Annotation:      annotation,
+					X:               x,
+					Y:               y,
+					ID:              id,
+					Write:           !args.NoWrite,
+					ImageOutputPath: args.ImageOutputPath,
+					ImageBaseName:   args.ImageBaseName,
+					ImageFormat:     args.ImageFormat,
+					ImageQuality:    args.ImageQuality,
+					TessPath:        args.TesseractPath,
+					TessLang:        args.OCRLang,
+					TessDataDir:     args.TessDataDir,
+				})
+
+				if err != nil {
+					return err
+				}
+
+				annots[index] = imgAnnot
 				return nil
 			}
 
 			str := ""
 			fallbackStr := ""
 
-			if annotType != Text {
-				annoRects := getAnnotationRects(page, annotation)
+			if annotType != pdfutils.Text {
+				annoRects := pdfutils.GetAnnotationRects(page, annotation)
 
 				if annoRects == nil {
 					return nil
@@ -275,8 +288,9 @@ func processAnnotations(
 						return nil
 					}
 
-					bounds := getBoundsFromAnnotMarks(anno, markRects)
-					annotText := getTextByAnnotBounds(fitzDoc, pageIndex, page, bounds)
+					bounds := pdfutils.GetBoundsFromAnnotMarks(anno, markRects)
+					annotText, err := pdfutils.GetTextByAnnotBounds(fitzDoc, pageIndex, page, bounds)
+					endIfErr(err)
 
 					if str == "" {
 						str = annotText
@@ -286,7 +300,7 @@ func processAnnotations(
 						str += " " + annotText
 					}
 
-					fallback := getFallbackText(text, anno, markRects, marks)
+					fallback := pdfutils.GetFallbackText(text, anno, markRects, marks)
 
 					if fallbackStr == "" {
 						fallbackStr = fallback
@@ -301,19 +315,19 @@ func processAnnotations(
 			comment := ""
 
 			if annotation.Contents != nil {
-				comment = removeNul(annotation.Contents.String())
+				comment = pdfutils.RemoveNul(annotation.Contents.String())
 			}
 
 			annotatedText := str
 
-			if shouldUseFallback(str) {
+			if pdfutils.ShouldUseFallback(str) {
 				annotatedText = fallbackStr
 			}
 
-			builtAnnot := &Annotation{
-				AnnotatedText: condenseSpaces(annotatedText),
-				Color:         getColor(annotation),
-				ColorCategory: getColorCategory(annotation),
+			builtAnnot := &pdfutils.Annotation{
+				AnnotatedText: pdfutils.CondenseSpaces(annotatedText),
+				Color:         pdfutils.GetAnnotationColor(annotation),
+				ColorCategory: pdfutils.GetAnnotationColorCategory(annotation),
 				Comment:       comment,
 				Type:          annotType,
 				Page:          pageIndex + 1,
@@ -334,7 +348,7 @@ func processAnnotations(
 	err = g.Wait()
 	endIfErr(err)
 
-	filtered := []*Annotation{}
+	filtered := []*pdfutils.Annotation{}
 
 	for _, annot := range annots {
 		if annot != nil {
@@ -342,8 +356,8 @@ func processAnnotations(
 		}
 	}
 
-	sort.Sort(ByX(filtered))
-	sort.Sort(ByY(filtered))
+	sort.Sort(pdfutils.ByX(filtered))
+	sort.Sort(pdfutils.ByY(filtered))
 
 	return filtered
 }
