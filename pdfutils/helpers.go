@@ -14,25 +14,26 @@ import (
 	"github.com/mgmeyers/unipdf/v3/model"
 )
 
-const dateFormat = "D:20060102150405+07'00'"
-const dateFormatZ = "D:20060102150405Z07'00'"
+const dateFormat = "D:20060102150405+0700"
+const dateFormatZ = "D:20060102150405Z0700"
 const dateFormatNoZ = "D:20060102150405"
 
 func GetAnnotationDate(annot *model.PdfAnnotation) *time.Time {
-	dateStr := annot.M
+	dateObj := annot.M
 
-	if dateStr == nil {
+	if dateObj == nil {
 		return nil
 	}
 
-	date, err := time.Parse(dateFormat, dateStr.String())
+	dateStr := strings.ReplaceAll(dateObj.String(), "'", "")
+	date, err := time.Parse(dateFormat, dateStr)
 
 	if err != nil {
-		date, err = time.Parse(dateFormatZ, dateStr.String())
+		date, err = time.Parse(dateFormatZ, dateStr)
 	}
 
 	if err != nil {
-		split := strings.Split(dateStr.String(), "Z")
+		split := strings.Split(dateStr, "Z")
 		date, err = time.Parse(dateFormatNoZ, split[0])
 	}
 
