@@ -25,14 +25,14 @@ type Annotation struct {
 	Y             float64 `json:"y"`
 }
 
-type ByX []*Annotation
+type ByCoord []*Annotation
 
-func (a ByX) Len() int           { return len(a) }
-func (a ByX) Less(i, j int) bool { return a[i].X < a[j].X }
-func (a ByX) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-
-type ByY []*Annotation
-
-func (a ByY) Len() int           { return len(a) }
-func (a ByY) Less(i, j int) bool { return a[i].Y > a[j].Y }
-func (a ByY) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByCoord) Len() int { return len(a) }
+func (a ByCoord) Less(i, j int) bool {
+	if a[i].X == a[j].X {
+		return a[i].Y > a[j].Y
+	} else {
+		return a[i].X < a[j].X
+	}
+}
+func (a ByCoord) Swap(i, j int) { a[i], a[j] = a[j], a[i] }

@@ -179,15 +179,15 @@ func main() {
 	err = g.Wait()
 	endIfErr(err)
 
-	ordered := []*pdfutils.Annotation{}
+	filtered := []*pdfutils.Annotation{}
 
 	for _, annots := range collectedAnnotations {
 		if annots != nil && len(annots) > 0 {
-			ordered = append(ordered, annots...)
+			filtered = append(filtered, annots...)
 		}
 	}
 
-	logOutput(ordered)
+	logOutput(filtered)
 }
 
 func processAnnotations(
@@ -356,8 +356,7 @@ func processAnnotations(
 		}
 	}
 
-	sort.Sort(pdfutils.ByX(filtered))
-	sort.Sort(pdfutils.ByY(filtered))
+	sort.Sort(pdfutils.ByCoord(filtered))
 
 	return filtered
 }
