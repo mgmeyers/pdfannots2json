@@ -141,16 +141,40 @@ func GetCoordinates(annotation *model.PdfAnnotation) (float64, float64) {
 	return x, y
 }
 
-func GetBoundsFromAnnotMarks(annotRect r2.Rect, markRects []r2.Rect) r2.Rect {
+func distanceBetween(x1, y1, x2, y2 float64) float64 {
+	return math.Sqrt(math.Pow(x1-x2, 2.0) + math.Pow(y1-y2, 2.0))
+}
+
+func GetClosestMark(x float64, y float64, markRects []r2.Rect) int {
+	min := 999999999.0
+	closest := -1
+
+	for i, mark := range markRects {
+		dist := distanceBetween(x, y, mark.X.Lo, mark.Y.Lo)
+
+		if dist < min {
+			min = dist
+			closest = i
+		}
+	}
+
+	return closest
+}
+
+func GetBoundsFromAnnotMarks(annotRect r2.Rect, markRects []r2.Rect) (r2.Rect, int) {
 	bound := r2.EmptyRect()
 	boundSet := false
+	offset := -1
 
-	for _, mark := range markRects {
+	for i, mark := range markRects {
 		if !mark.IsValid() || mark.IsEmpty() {
 			continue
 		}
 
 		if annotRect.Intersects(mark) && IsWithinOverlapThresh(annotRect, mark) {
+			if offset == -1 {
+				offset = i
+			}
 			if !boundSet {
 				bound = mark
 				boundSet = true
@@ -163,5 +187,5 @@ func GetBoundsFromAnnotMarks(annotRect r2.Rect, markRects []r2.Rect) r2.Rect {
 		}
 	}
 
-	return bound
+	return bound, offset
 }

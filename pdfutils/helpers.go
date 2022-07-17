@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -13,6 +14,20 @@ import (
 	"github.com/mgmeyers/unipdf/v3/extractor"
 	"github.com/mgmeyers/unipdf/v3/model"
 )
+
+func max6(i int) string {
+	str := strconv.Itoa(i)
+
+	if len(str) > 6 {
+		return str[0:6]
+	}
+
+	return str
+}
+
+func GetAnnotationSortKey(page int, offset int, top int) string {
+	return fmt.Sprintf("%06s|%06s|%06s", max6(page), max6(offset), max6(top))
+}
 
 const dateFormat = "D:20060102150405+0700"
 const dateFormatZ = "D:20060102150405Z0700"

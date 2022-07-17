@@ -6,6 +6,7 @@ import (
 	"image"
 	"io"
 	"log"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -21,7 +22,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v1.0.4"
+const version = "v1.0.5"
 
 var args struct {
 	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdfannots2json"`
@@ -275,6 +276,8 @@ func processAnnotations(
 
 			str := ""
 			fallbackStr := ""
+			offset := -1
+			top := 0
 
 			if annotType != pdfutils.Text {
 				annoRects := pdfutils.GetAnnotationRects(page, annotation)
@@ -288,7 +291,13 @@ func processAnnotations(
 						return nil
 					}
 
-					bounds := pdfutils.GetBoundsFromAnnotMarks(anno, markRects)
+					bounds, o := pdfutils.GetBoundsFromAnnotMarks(anno, markRects)
+
+					if offset == -1 {
+						offset = o
+						top = int(math.Max(page.MediaBox.Height()-anno.Y.Hi, 0.0))
+					}
+
 					annotText, err := pdfutils.GetTextByAnnotBounds(fitzDoc, pageIndex, page, bounds)
 					endIfErr(err)
 
@@ -310,6 +319,9 @@ func processAnnotations(
 						fallbackStr += " " + fallback
 					}
 				}
+			} else {
+				offset = pdfutils.GetClosestMark(x, y, markRects)
+				top = int(math.Max(page.MediaBox.Height()-y, 0.0))
 			}
 
 			comment := ""
@@ -334,6 +346,7 @@ func processAnnotations(
 				X:             x,
 				Y:             y,
 				ID:            id,
+				SortIndex:     pdfutils.GetAnnotationSortKey(pageIndex, offset, top),
 			}
 
 			if date != nil {
@@ -356,7 +369,7 @@ func processAnnotations(
 		}
 	}
 
-	sort.Sort(pdfutils.ByCoord(filtered))
+	sort.Sort(pdfutils.BySortIndex(filtered))
 
 	return filtered
 }

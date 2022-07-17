@@ -23,16 +23,13 @@ type Annotation struct {
 	Type          string  `json:"type"`
 	X             float64 `json:"x"`
 	Y             float64 `json:"y"`
+	SortIndex     string  `json:"-"`
 }
 
-type ByCoord []*Annotation
+type BySortIndex []*Annotation
 
-func (a ByCoord) Len() int { return len(a) }
-func (a ByCoord) Less(i, j int) bool {
-	if a[i].X == a[j].X {
-		return a[i].Y > a[j].Y
-	} else {
-		return a[i].X < a[j].X
-	}
+func (a BySortIndex) Len() int { return len(a) }
+func (a BySortIndex) Less(i, j int) bool {
+	return a[i].SortIndex < a[j].SortIndex
 }
-func (a ByCoord) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a BySortIndex) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
