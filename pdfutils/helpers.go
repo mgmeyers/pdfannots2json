@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/geo/r2"
 	"github.com/mgmeyers/go-fitz"
+	"github.com/mgmeyers/unipdf/v3/core"
 	"github.com/mgmeyers/unipdf/v3/extractor"
 	"github.com/mgmeyers/unipdf/v3/model"
 )
@@ -188,4 +189,143 @@ var nlAndSpace = regexp.MustCompile(`[\n\s]+`)
 
 func CondenseSpaces(str string) string {
 	return nlAndSpace.ReplaceAllString(str, " ")
+}
+
+func intToRoman(number int) string {
+	maxRomanNumber := 3999
+	if number > maxRomanNumber {
+		return strconv.Itoa(number)
+	}
+
+	conversions := []struct {
+		value int
+		digit string
+	}{
+		{1000, "M"},
+		{900, "CM"},
+		{500, "D"},
+		{400, "CD"},
+		{100, "C"},
+		{90, "XC"},
+		{50, "L"},
+		{40, "XL"},
+		{10, "X"},
+		{9, "IX"},
+		{5, "V"},
+		{4, "IV"},
+		{1, "I"},
+	}
+
+	var roman strings.Builder
+	for _, conversion := range conversions {
+		for number >= conversion.value {
+			roman.WriteString(conversion.digit)
+			number -= conversion.value
+		}
+	}
+
+	return roman.String()
+}
+
+func intToAZ(number int) string {
+	quot := (number - 1) / 26
+	rem := number % 26
+
+	if rem == 0 {
+		rem = 26
+	}
+
+	alpha := "abcdefghijklmnopqrstuvwxyz"
+
+	return strings.Repeat(string(alpha[rem-1]), quot+1)
+}
+
+// https://www.w3.org/TR/WCAG20-TECHS/PDF17.html#PDF17-ex2
+func GetPageLabelMap(numPages int, labels core.PdfObject) map[int]string {
+	labelMap := map[int]string{}
+
+	asIO, ok := labels.(*core.PdfIndirectObject)
+	if !ok {
+		return nil
+	}
+
+	asOD, ok := asIO.PdfObject.(*core.PdfObjectDictionary)
+	if !ok {
+		return nil
+	}
+
+	nums := asOD.Get("Nums")
+
+	arr, ok := nums.(*core.PdfObjectArray)
+	if !ok {
+		return nil
+	}
+
+	indexMap := map[int]*core.PdfObjectDictionary{}
+
+	for i := 0; i < arr.Len(); i += 2 {
+		idx, ok := arr.Get(i).(*core.PdfObjectInteger)
+		if !ok {
+			continue
+		}
+
+		obj, ok := arr.Get(i + 1).(*core.PdfIndirectObject)
+		if !ok {
+			continue
+		}
+
+		dict, ok := obj.PdfObject.(*core.PdfObjectDictionary)
+		if !ok {
+			continue
+		}
+
+		indexMap[int(*idx)] = dict
+	}
+
+	var curr *core.PdfObjectDictionary
+	curPage := 0
+
+	for i := 0; i < numPages; i++ {
+		dict, ok := indexMap[i]
+		if ok {
+			curr = dict
+			curPage = 0
+		}
+
+		if curr != nil {
+			s := curr.Get("S").(*core.PdfObjectName)
+			st, _ := curr.Get("St").(*core.PdfObjectInteger)
+			p, _ := curr.Get("P").(*core.PdfObjectString)
+			page := curPage
+
+			if st != nil {
+				page = int(*st) + curPage
+			} else {
+				page = curPage + 1
+			}
+
+			pageStr := strconv.Itoa(page)
+
+			switch s.String() {
+			case "r":
+				pageStr = strings.ToLower(intToRoman(page))
+			case "R":
+				pageStr = strings.ToUpper(intToRoman(page))
+			case "a":
+				pageStr = strings.ToLower(intToAZ(page))
+			case "A":
+				pageStr = strings.ToUpper(intToAZ(page))
+			}
+
+			if p != nil {
+				pageStr = p.Str() + pageStr
+			}
+
+			labelMap[i] = pageStr
+		}
+
+		curPage++
+	}
+
+	return labelMap
 }

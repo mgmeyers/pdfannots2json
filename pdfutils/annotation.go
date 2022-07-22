@@ -20,6 +20,7 @@ type Annotation struct {
 	ImagePath     string  `json:"imagePath,omitempty"`
 	OCRText       string  `json:"ocrText,omitempty"`
 	Page          int     `json:"page"`
+	PageLabel     string  `json:"pageLabel"`
 	Type          string  `json:"type"`
 	X             float64 `json:"x"`
 	Y             float64 `json:"y"`

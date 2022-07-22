@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,7 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v1.0.5"
+const version = "v1.0.6"
 
 var args struct {
 	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdfannots2json"`
@@ -103,12 +104,23 @@ func main() {
 	numPages, err := pdfReader.GetNumPages()
 	endIfErr(err)
 
+	pageLabels, err := pdfReader.GetPageLabels()
+	endIfErr(err)
+
 	collectedAnnotations := make([][]*pdfutils.Annotation, numPages)
 	g := new(errgroup.Group)
 	mu := sync.Mutex{}
 
+	pageLabelMap := pdfutils.GetPageLabelMap(numPages, pageLabels)
+
 	for i := 0; i < numPages; i++ {
 		index := i
+		pageLabel, ok := pageLabelMap[i]
+
+		if !ok {
+			pageLabel = strconv.Itoa(i + 1)
+		}
+
 		g.Go(func() error {
 			page, err := pdfReader.GetPage(index + 1)
 			if err != nil {
@@ -165,6 +177,7 @@ func main() {
 			annots := processAnnotations(
 				fitzDoc,
 				page,
+				pageLabel,
 				&pageImg,
 				&ocrImg,
 				index,
@@ -194,6 +207,7 @@ func main() {
 func processAnnotations(
 	fitzDoc *fitz.Document,
 	page *model.PdfPage,
+	pageLabel string,
 	pageImg *image.Image,
 	ocrImg *image.Image,
 	pageIndex int,
@@ -343,6 +357,7 @@ func processAnnotations(
 				Comment:       comment,
 				Type:          annotType,
 				Page:          pageIndex + 1,
+				PageLabel:     pageLabel,
 				X:             x,
 				Y:             y,
 				ID:            id,
