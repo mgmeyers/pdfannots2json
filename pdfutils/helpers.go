@@ -293,35 +293,38 @@ func GetPageLabelMap(numPages int, labels core.PdfObject) map[int]string {
 		}
 
 		if curr != nil {
-			s := curr.Get("S").(*core.PdfObjectName)
-			st, _ := curr.Get("St").(*core.PdfObjectInteger)
-			p, _ := curr.Get("P").(*core.PdfObjectString)
-			page := curPage
+			s, ok := curr.Get("S").(*core.PdfObjectName)
 
-			if st != nil {
-				page = int(*st) + curPage
-			} else {
-				page = curPage + 1
+			if ok {
+				st, _ := curr.Get("St").(*core.PdfObjectInteger)
+				p, _ := curr.Get("P").(*core.PdfObjectString)
+				page := curPage
+
+				if st != nil {
+					page = int(*st) + curPage
+				} else {
+					page = curPage + 1
+				}
+
+				pageStr := strconv.Itoa(page)
+
+				switch s.String() {
+				case "r":
+					pageStr = strings.ToLower(intToRoman(page))
+				case "R":
+					pageStr = strings.ToUpper(intToRoman(page))
+				case "a":
+					pageStr = strings.ToLower(intToAZ(page))
+				case "A":
+					pageStr = strings.ToUpper(intToAZ(page))
+				}
+
+				if p != nil {
+					pageStr = p.Str() + pageStr
+				}
+
+				labelMap[i] = pageStr
 			}
-
-			pageStr := strconv.Itoa(page)
-
-			switch s.String() {
-			case "r":
-				pageStr = strings.ToLower(intToRoman(page))
-			case "R":
-				pageStr = strings.ToUpper(intToRoman(page))
-			case "a":
-				pageStr = strings.ToLower(intToAZ(page))
-			case "A":
-				pageStr = strings.ToUpper(intToAZ(page))
-			}
-
-			if p != nil {
-				pageStr = p.Str() + pageStr
-			}
-
-			labelMap[i] = pageStr
 		}
 
 		curPage++

@@ -23,7 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v1.0.6"
+const version = "v1.0.7"
 
 var args struct {
 	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdfannots2json"`
@@ -345,6 +345,8 @@ func processAnnotations(
 			}
 
 			annotatedText := str
+
+			log.Println(str, fallbackStr)
 
 			if pdfutils.ShouldUseFallback(str) {
 				annotatedText = fallbackStr

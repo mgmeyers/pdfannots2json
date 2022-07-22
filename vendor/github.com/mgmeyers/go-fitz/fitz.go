@@ -340,7 +340,7 @@ func (f *Document) TextByBounds(pageNumber int, dpi float64, x0, y0, x1, y1 floa
 	defer C.fz_drop_stext_page(f.ctx, text)
 
 	var opts C.fz_stext_options
-	opts.flags = 0
+	opts.flags = 1 | 2
 
 	device := C.fz_new_stext_device(f.ctx, text, &opts)
 	C.fz_enable_device_hints(f.ctx, device, C.FZ_NO_CACHE)
