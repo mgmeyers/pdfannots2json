@@ -330,6 +330,43 @@ func (f *Document) TextByBounds(pageNumber int, dpi float64, x0, y0, x1, y1 floa
 	page := C.fz_load_page(f.ctx, f.doc, C.int(pageNumber))
 	defer C.fz_drop_page(f.ctx, page)
 
+	bounds := C.fz_bound_page(f.ctx, page)
+
+	var ctm C.fz_matrix
+	ctm = C.fz_scale(C.float(dpi/72), C.float(dpi/72))
+
+	text := C.fz_new_stext_page(f.ctx, bounds)
+	defer C.fz_drop_stext_page(f.ctx, text)
+
+	var opts C.fz_stext_options
+	opts.flags = 1 | 2
+
+	device := C.fz_new_stext_device(f.ctx, text, &opts)
+	C.fz_enable_device_hints(f.ctx, device, C.FZ_NO_CACHE)
+	defer C.fz_drop_device(f.ctx, device)
+
+	var cookie C.fz_cookie
+	C.fz_run_page_contents(f.ctx, page, device, ctm, &cookie)
+
+	rect := C.fz_make_rect(C.float(x0), C.float(y0), C.float(x1), C.float(y1))
+	str := C.GoString(C.fz_copy_rectangle(f.ctx, text, rect, 0))
+
+	C.fz_close_device(f.ctx, device)
+
+	return str, nil
+}
+
+func (f *Document) TextBySelection(pageNumber int, dpi float64, x0, y0, x1, y1 float32) (string, error) {
+	f.mtx.Lock()
+	defer f.mtx.Unlock()
+
+	if pageNumber >= f.NumPage() {
+		return "", ErrPageMissing
+	}
+
+	page := C.fz_load_page(f.ctx, f.doc, C.int(pageNumber))
+	defer C.fz_drop_page(f.ctx, page)
+
 	var bounds C.fz_rect
 	bounds = C.fz_bound_page(f.ctx, page)
 
@@ -350,8 +387,9 @@ func (f *Document) TextByBounds(pageNumber int, dpi float64, x0, y0, x1, y1 floa
 	C.fz_run_page_contents(f.ctx, page, device, ctm, &cookie)
 
 	C.fz_close_device(f.ctx, device)
-	rect := C.fz_make_rect(C.float(x0), C.float(y0), C.float(x1), C.float(y1))
-	str := C.GoString(C.fz_copy_rectangle(f.ctx, text, rect, 0))
+	p1 := C.fz_make_point(C.float(x0), C.float((y0+y1)/2))
+	p2 := C.fz_make_point(C.float(x1), C.float((y0+y1)/2))
+	str := C.GoString(C.fz_copy_selection(f.ctx, text, p1, p2, 0))
 
 	return str, nil
 }

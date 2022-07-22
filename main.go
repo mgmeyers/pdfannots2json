@@ -23,7 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v1.0.7"
+const version = "v1.0.8"
 
 var args struct {
 	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdfannots2json"`
@@ -125,6 +125,15 @@ func main() {
 			page, err := pdfReader.GetPage(index + 1)
 			if err != nil {
 				return err
+			}
+
+			if page.Rotate == nil {
+				var zero int64 = 0
+				page.Rotate = &zero
+			}
+
+			if page.CropBox == nil {
+				page.CropBox = page.MediaBox
 			}
 
 			mu.Lock()
@@ -346,14 +355,12 @@ func processAnnotations(
 
 			annotatedText := str
 
-			log.Println(str, fallbackStr)
-
 			if pdfutils.ShouldUseFallback(str) {
 				annotatedText = fallbackStr
 			}
 
 			builtAnnot := &pdfutils.Annotation{
-				AnnotatedText: pdfutils.CondenseSpaces(annotatedText),
+				AnnotatedText: pdfutils.CondenseSpaces(pdfutils.ExpandLigatures(annotatedText)),
 				Color:         pdfutils.GetAnnotationColor(annotation),
 				ColorCategory: pdfutils.GetAnnotationColorCategory(annotation),
 				Comment:       comment,

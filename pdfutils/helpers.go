@@ -77,6 +77,26 @@ func GetAnnotationType(t interface{}) string {
 	}
 }
 
+var ff = regexp.MustCompile(`\x{FB00} *`)
+var fi = regexp.MustCompile(`\x{FB01} *`)
+var fl = regexp.MustCompile(`\x{FB02} *`)
+var ffi = regexp.MustCompile(`\x{FB03} *`)
+var ffl = regexp.MustCompile(`\x{FB04} *`)
+var ft = regexp.MustCompile(`\x{FB05} *`)
+var st = regexp.MustCompile(`\x{FB06} *`)
+
+func ExpandLigatures(str string) string {
+	str = ff.ReplaceAllString(str, "ff")
+	str = fi.ReplaceAllString(str, "fi")
+	str = fl.ReplaceAllString(str, "fl")
+	str = ffi.ReplaceAllString(str, "ffi")
+	str = ffl.ReplaceAllString(str, "ffl")
+	str = ft.ReplaceAllString(str, "ft")
+	str = st.ReplaceAllString(str, "st")
+
+	return str
+}
+
 func RemoveNul(str string) string {
 	return strings.Map(func(r rune) rune {
 		if r == unicode.ReplacementChar {
@@ -92,8 +112,26 @@ func RemoveNul(str string) string {
 func GetTextByAnnotBounds(fitzDoc *fitz.Document, pageIndex int, page *model.PdfPage, bounds r2.Rect) (string, error) {
 	height := page.MediaBox.Height()
 
-	if page.Rotate != nil && (*page.Rotate == 90 || *page.Rotate == 270) {
+	xAdjust := page.MediaBox.Llx - page.CropBox.Llx
+	yAdjust := page.MediaBox.Ury - page.CropBox.Ury
+
+	if *page.Rotate == 90 {
 		height = page.MediaBox.Width()
+
+		xAdjust = page.MediaBox.Lly - page.CropBox.Lly
+		yAdjust = page.MediaBox.Urx - page.CropBox.Urx
+	}
+
+	if *page.Rotate == 180 {
+		xAdjust = page.CropBox.Urx - page.MediaBox.Urx
+		yAdjust = page.CropBox.Lly - page.MediaBox.Lly
+	}
+
+	if *page.Rotate == 270 {
+		height = page.MediaBox.Width()
+
+		xAdjust = page.CropBox.Ury - page.MediaBox.Ury
+		yAdjust = page.CropBox.Llx - page.MediaBox.Llx
 	}
 
 	rotated := ApplyPageRotation(page, []float64{bounds.X.Lo, bounds.Y.Lo, bounds.X.Hi, bounds.Y.Hi})
@@ -103,7 +141,7 @@ func GetTextByAnnotBounds(fitzDoc *fitz.Document, pageIndex int, page *model.Pdf
 	x2 := rotated[2]
 	y2 := rotated[3]
 
-	if page.Rotate != nil && (*page.Rotate == 0 || *page.Rotate == 180) {
+	if *page.Rotate == 0 || *page.Rotate == 180 {
 		bHeight := rotated[3] - rotated[1]
 		yDiff := (bHeight * 0.6) / 2
 		y1 += yDiff
@@ -114,6 +152,11 @@ func GetTextByAnnotBounds(fitzDoc *fitz.Document, pageIndex int, page *model.Pdf
 		x1 += xDiff
 		x2 -= xDiff
 	}
+
+	x1 += xAdjust
+	x2 += xAdjust
+	y1 += yAdjust
+	y2 += yAdjust
 
 	// fitz's y-axis is oriented at the top
 	y1 = height - y1
