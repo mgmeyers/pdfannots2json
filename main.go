@@ -23,7 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v1.0.8"
+const version = "v1.0.9"
 
 var args struct {
 	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdfannots2json"`
@@ -118,7 +118,7 @@ func main() {
 		pageLabel, ok := pageLabelMap[i]
 
 		if !ok {
-			pageLabel = strconv.Itoa(i + 1)
+			pageLabel = strconv.Itoa(index + 1)
 		}
 
 		g.Go(func() error {
@@ -162,6 +162,10 @@ func main() {
 				}
 
 				filtered = append(filtered, a)
+			}
+
+			if len(filtered) == 0 {
+				return nil
 			}
 
 			var pageImg image.Image
@@ -314,14 +318,14 @@ func processAnnotations(
 						return nil
 					}
 
-					bounds, o := pdfutils.GetBoundsFromAnnotMarks(anno, markRects)
+					_, o := pdfutils.GetBoundsFromAnnotMarks(anno, markRects)
 
 					if offset == -1 {
 						offset = o
 						top = int(math.Max(page.MediaBox.Height()-anno.Y.Hi, 0.0))
 					}
 
-					annotText, err := pdfutils.GetTextByAnnotBounds(fitzDoc, pageIndex, page, bounds)
+					annotText, err := pdfutils.GetTextByAnnotBounds(fitzDoc, pageIndex, page, anno)
 					endIfErr(err)
 
 					if str == "" {
@@ -360,7 +364,7 @@ func processAnnotations(
 			}
 
 			builtAnnot := &pdfutils.Annotation{
-				AnnotatedText: pdfutils.CondenseSpaces(pdfutils.ExpandLigatures(annotatedText)),
+				AnnotatedText: pdfutils.DeHyphen(pdfutils.CondenseSpaces(pdfutils.ExpandLigatures(annotatedText))),
 				Color:         pdfutils.GetAnnotationColor(annotation),
 				ColorCategory: pdfutils.GetAnnotationColorCategory(annotation),
 				Comment:       comment,

@@ -34,11 +34,11 @@ func ApplyPageRotation(page *model.PdfPage, rect []float64) []float64 {
 	return []float64{width - rect[2], height - rect[3], width - rect[0], height - rect[1]}
 }
 
-func IsWithinOverlapThresh(annot r2.Rect, mark r2.Rect) bool {
+func IsWithinOverlapThresh(annot r2.Rect, mark r2.Rect, thresh float64) bool {
 	markSize := getArea(mark)
 	intersect := getArea(annot.Intersection(mark))
 
-	return intersect/markSize >= 0.5
+	return intersect/markSize >= thresh
 }
 
 func getArea(r r2.Rect) float64 {
@@ -161,6 +161,22 @@ func GetClosestMark(x float64, y float64, markRects []r2.Rect) int {
 	return closest
 }
 
+func scaleY(rect r2.Rect, by float64) r2.Rect {
+	clone := r2.EmptyRect()
+
+	clone.X.Hi = rect.X.Hi
+	clone.X.Lo = rect.X.Lo
+	clone.Y.Hi = rect.Y.Hi
+	clone.Y.Lo = rect.Y.Lo
+
+	height := clone.Y.Hi - clone.Y.Lo
+	yDiff := (height * by) / 2
+	clone.Y.Hi -= yDiff
+	clone.Y.Lo += yDiff
+
+	return clone
+}
+
 func GetBoundsFromAnnotMarks(annotRect r2.Rect, markRects []r2.Rect) (r2.Rect, int) {
 	bound := r2.EmptyRect()
 	boundSet := false
@@ -171,7 +187,9 @@ func GetBoundsFromAnnotMarks(annotRect r2.Rect, markRects []r2.Rect) (r2.Rect, i
 			continue
 		}
 
-		if annotRect.Intersects(mark) && IsWithinOverlapThresh(annotRect, mark) {
+		scaled := scaleY(annotRect, 0.6)
+
+		if scaled.Intersects(mark) {
 			if offset == -1 {
 				offset = i
 			}

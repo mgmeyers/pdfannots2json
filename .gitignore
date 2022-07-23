@@ -18,3 +18,4 @@ dist
 pdf-annots2json
 pdfannots2json
 *.pdf
+debug

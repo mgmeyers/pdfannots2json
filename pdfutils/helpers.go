@@ -97,6 +97,12 @@ func ExpandLigatures(str string) string {
 	return str
 }
 
+var hyphen = regexp.MustCompile(`([a-zA-Z])- +([a-zA-Z])`)
+
+func DeHyphen(str string) string {
+	return hyphen.ReplaceAllString(str, "$1$2")
+}
+
 func RemoveNul(str string) string {
 	return strings.Map(func(r rune) rune {
 		if r == unicode.ReplacementChar {
@@ -134,33 +140,15 @@ func GetTextByAnnotBounds(fitzDoc *fitz.Document, pageIndex int, page *model.Pdf
 		yAdjust = page.CropBox.Llx - page.MediaBox.Llx
 	}
 
-	rotated := ApplyPageRotation(page, []float64{bounds.X.Lo, bounds.Y.Lo, bounds.X.Hi, bounds.Y.Hi})
+	scaled := scaleY(bounds, 0.6)
+	rotated := ApplyPageRotation(page, []float64{scaled.X.Lo, scaled.Y.Lo, scaled.X.Hi, scaled.Y.Hi})
 
-	x1 := rotated[0]
-	y1 := rotated[1]
-	x2 := rotated[2]
-	y2 := rotated[3]
-
-	if *page.Rotate == 0 || *page.Rotate == 180 {
-		bHeight := rotated[3] - rotated[1]
-		yDiff := (bHeight * 0.6) / 2
-		y1 += yDiff
-		y2 -= yDiff
-	} else {
-		bWidth := rotated[2] - rotated[0]
-		xDiff := (bWidth * 0.6) / 2
-		x1 += xDiff
-		x2 -= xDiff
-	}
-
-	x1 += xAdjust
-	x2 += xAdjust
-	y1 += yAdjust
-	y2 += yAdjust
+	x1 := rotated[0] + xAdjust
+	x2 := rotated[2] + xAdjust
 
 	// fitz's y-axis is oriented at the top
-	y1 = height - y1
-	y2 = height - y2
+	y1 := height - (rotated[1] + yAdjust)
+	y2 := height - (rotated[3] + yAdjust)
 
 	return fitzDoc.TextByBounds(
 		pageIndex,
@@ -180,7 +168,9 @@ func GetFallbackText(text string, annotRect r2.Rect, markRects []r2.Rect, marks 
 			continue
 		}
 
-		if annotRect.Intersects(mark) && IsWithinOverlapThresh(annotRect, mark) {
+		scaled := scaleY(annotRect, 0.6)
+
+		if scaled.Intersects(mark) {
 			if len(marks[i].Text) > 0 && marks[i].Offset > 0 && len(segment) > 0 {
 				prevChar := string(text[marks[i].Offset-1])
 
@@ -231,7 +221,7 @@ func GetAnnotationID(ids map[string]bool, pageIndex int, x float64, y float64, a
 var nlAndSpace = regexp.MustCompile(`[\n\s]+`)
 
 func CondenseSpaces(str string) string {
-	return nlAndSpace.ReplaceAllString(str, " ")
+	return nlAndSpace.ReplaceAllString(strings.Trim(str, " "), " ")
 }
 
 func intToRoman(number int) string {
