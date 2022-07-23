@@ -365,3 +365,42 @@ func GetPageLabelMap(numPages int, labels core.PdfObject) map[int]string {
 
 	return labelMap
 }
+
+func GetMediaBox(page *model.PdfPage) *model.PdfRectangle {
+	if page.MediaBox != nil {
+		return page.MediaBox
+	}
+
+	parent, ok := page.Parent.(*core.PdfIndirectObject)
+
+	for ok {
+		dict, dOk := parent.PdfObject.(*core.PdfObjectDictionary)
+		if !dOk {
+			return nil
+		}
+
+		mb, mbOk := dict.Get("MediaBox").(*core.PdfObjectArray)
+		if !mbOk {
+			parent, ok = dict.Get("Parent").(*core.PdfIndirectObject)
+			continue
+		}
+
+		rect, err := mb.ToFloat64Array()
+		if err != nil {
+			return nil
+		}
+
+		if len(rect) < 4 {
+			return nil
+		}
+
+		return &model.PdfRectangle{
+			Llx: rect[0],
+			Lly: rect[1],
+			Urx: rect[2],
+			Ury: rect[3],
+		}
+	}
+
+	return nil
+}

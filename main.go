@@ -23,7 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v1.0.9"
+const version = "v1.0.10"
 
 var args struct {
 	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdfannots2json"`
@@ -125,6 +125,16 @@ func main() {
 			page, err := pdfReader.GetPage(index + 1)
 			if err != nil {
 				return err
+			}
+
+			if page.MediaBox == nil {
+				mb := pdfutils.GetMediaBox(page)
+
+				if mb == nil {
+					return nil
+				}
+
+				page.MediaBox = mb
 			}
 
 			if page.Rotate == nil {
