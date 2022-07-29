@@ -106,9 +106,9 @@ func HandleImageAnnot(args ImageAnnotArgs) (*Annotation, error) {
 
 		crop := image.Rect(
 			int(math.Round(annotRect[0]*scale)),
-			int(math.Round(annotRect[2]*scale)),
 			int(math.Round(annotRect[1]*scale)),
-			int(math.Round(annotRect[0]*scale)),
+			int(math.Round(annotRect[2]*scale)),
+			int(math.Round(annotRect[3]*scale)),
 		)
 
 		cropped, err := CropImage(args.PageImg, crop)
