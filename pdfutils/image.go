@@ -34,14 +34,11 @@ type ImageAnnotArgs struct {
 }
 
 func HandleImageAnnot(args ImageAnnotArgs) (*Annotation, error) {
-	ctx := args.Annotation.GetContext()
-	width := args.Page.MediaBox.Width()
-	height := args.Page.MediaBox.Height()
+	page := args.Page
+	width := page.CropBox.Width()
+	height := page.CropBox.Height()
 
-	if args.Page.Rotate != nil && (*args.Page.Rotate == 90 || *args.Page.Rotate == 270) {
-		width = args.Page.MediaBox.Height()
-		height = args.Page.MediaBox.Width()
-	}
+	ctx := args.Annotation.GetContext()
 
 	objArr, ok := ctx.(*model.PdfAnnotationSquare).Rect.(*core.PdfObjectArray)
 	if !ok {
@@ -53,14 +50,43 @@ func HandleImageAnnot(args ImageAnnotArgs) (*Annotation, error) {
 		return nil, err
 	}
 
+	xAdjust := page.MediaBox.Llx - page.CropBox.Llx
+	yAdjust := page.MediaBox.Lly - page.CropBox.Lly
+
+	if *page.Rotate == 90 {
+		width = page.CropBox.Height()
+		height = page.CropBox.Width()
+
+		xAdjust = page.MediaBox.Lly - page.CropBox.Lly
+		yAdjust = page.MediaBox.Llx - page.CropBox.Llx
+	}
+
+	if *page.Rotate == 180 {
+		xAdjust = page.CropBox.Urx - page.MediaBox.Urx
+		yAdjust = page.CropBox.Ury - page.MediaBox.Ury
+	}
+
+	if *page.Rotate == 270 {
+		width = page.CropBox.Height()
+		height = page.CropBox.Width()
+
+		xAdjust = page.CropBox.Ury - page.MediaBox.Ury
+		yAdjust = page.CropBox.Urx - page.MediaBox.Urx
+	}
+
 	annotRect = ApplyPageRotation(args.Page, annotRect)
+
+	annotRect[0] = annotRect[0] + xAdjust
+	annotRect[1] = height - (annotRect[1] + yAdjust)
+	annotRect[2] = annotRect[2] + xAdjust
+	annotRect[3] = height - (annotRect[3] + yAdjust)
 
 	if args.Write {
 		if _, err := os.Stat(args.ImageOutputPath); os.IsNotExist(err) {
 			if err = os.MkdirAll(args.ImageOutputPath, os.ModePerm); err != nil {
 				return nil, err
 			}
-		} else {
+		} else if err != nil {
 			return nil, err
 		}
 	}
@@ -71,7 +97,7 @@ func HandleImageAnnot(args ImageAnnotArgs) (*Annotation, error) {
 		args.ImageBaseName,
 		args.PageIndex+1,
 		int(annotRect[0]),
-		int(annotRect[1]),
+		int(annotRect[2]),
 		args.ImageFormat,
 	)
 
@@ -80,9 +106,9 @@ func HandleImageAnnot(args ImageAnnotArgs) (*Annotation, error) {
 
 		crop := image.Rect(
 			int(math.Round(annotRect[0]*scale)),
-			int(math.Round((height-annotRect[1])*scale)),
 			int(math.Round(annotRect[2]*scale)),
-			int(math.Round((height-annotRect[3])*scale)),
+			int(math.Round(annotRect[1]*scale)),
+			int(math.Round(annotRect[0]*scale)),
 		)
 
 		cropped, err := CropImage(args.PageImg, crop)
@@ -139,21 +165,19 @@ func HandleImageOCR(
 	lang string,
 	dataDir string,
 ) string {
-	width := page.MediaBox.Width()
-	height := page.MediaBox.Height()
+	width := page.CropBox.Width()
 
 	if page.Rotate != nil && (*page.Rotate == 90 || *page.Rotate == 270) {
-		width = page.MediaBox.Height()
-		height = page.MediaBox.Width()
+		width = page.CropBox.Height()
 	}
 
 	ocrScale := float64((*ocrImg).Bounds().Max.X) / width
 
 	ocrCrop := image.Rect(
 		int(math.Round(annotRect[0]*ocrScale)),
-		int(math.Round((height-annotRect[1])*ocrScale)),
+		int(math.Round(annotRect[1]*ocrScale)),
 		int(math.Round(annotRect[2]*ocrScale)),
-		int(math.Round((height-annotRect[3])*ocrScale)),
+		int(math.Round(annotRect[3]*ocrScale)),
 	)
 
 	ocrCropped, err := CropImage(ocrImg, ocrCrop)
