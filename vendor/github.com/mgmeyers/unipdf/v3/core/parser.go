@@ -33,6 +33,7 @@ var reReference = regexp.MustCompile(`^\s*[-]*(\d+)\s+(\d+)\s+R`)
 var reIndirectObject = regexp.MustCompile(`(\d+)\s+(\d+)\s+obj`)
 var reXrefSubsection = regexp.MustCompile(`(\d+)\s+(\d+)\s*$`)
 var reXrefEntry = regexp.MustCompile(`(\d+)\s+(\d+)\s+([nf])\s*$`)
+var reXrefMissingNL = regexp.MustCompile(`xref\s+(\d+)\s+(\d+)\s*$`)
 
 // PdfParser parses a PDF file and provides access to the object structure of the PDF.
 type PdfParser struct {
@@ -714,9 +715,14 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 			return nil, err
 		}
 
-		txt, err = parser.readTextLine()
-		if err != nil {
-			return nil, err
+		if reXrefMissingNL.MatchString(txt) {
+			// Fix xref tables that start with `xref N N`
+			txt = reXrefTable.ReplaceAllString(txt, "")
+		} else {
+			txt, err = parser.readTextLine()
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		result1 := reXrefSubsection.FindStringSubmatch(txt)
@@ -726,8 +732,10 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 			// and the number of entries in the subsection are not on the same line.
 			tryMatch := len(unmatchedContent) > 0
 			unmatchedContent += txt + "\n"
+			common.Log.Trace("xref result1 empty %s %v", txt, result1)
 			if tryMatch {
 				result1 = reXrefSubsection.FindStringSubmatch(unmatchedContent)
+				common.Log.Trace("xref reparsed result1 %s %v", unmatchedContent, result1)
 			}
 		}
 		if len(result1) == 3 {

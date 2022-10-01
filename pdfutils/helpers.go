@@ -189,17 +189,19 @@ func GetFallbackText(text string, annotRect r2.Rect, markRects []r2.Rect, marks 
 	return segment
 }
 
-func ShouldUseFallback(str string) bool {
+func ShouldUseFallback(str string, fallback string) bool {
 	length := len(str)
 	missingChars := strings.Count(str, "�")
+	spaceChars := strings.Count(str, " ")
+	spaceFallbackChars := strings.Count(fallback, " ")
 
 	if missingChars == 0 {
-		return false
+		return float64(spaceFallbackChars) > float64(spaceChars)*1.2
 	}
 
 	ratio := float64(missingChars) / float64(length)
 
-	return ratio > 0.2
+	return ratio > 0.2 || float64(spaceFallbackChars) > float64(spaceChars)*1.2
 }
 
 func GetAnnotationID(ids map[string]bool, pageIndex int, x float64, y float64, annotType string) string {
