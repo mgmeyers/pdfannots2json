@@ -61,7 +61,7 @@ func ValidateLang(tessPath, code string) bool {
 		return false
 	}
 
-	outLines := strings.Split(string(out), "\n")
+	outLines := strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n")
 
 	for _, lang := range split {
 		found := false
