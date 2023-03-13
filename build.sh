@@ -4,7 +4,7 @@ rm -rf ./dist
 mkdir ./dist
 
 echo "=== Building mac amd64 ==="
-CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -trimpath -o ./dist/pdfannots2json .
+CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 CGO_CFLAGS="-mmacosx-version-min=10.12" CGO_LDFLAGS="-mmacosx-version-min=10.12" go build -trimpath -o ./dist/pdfannots2json .
 cd ./dist
 tar -czvf "./pdfannots2json.Mac.Intel.tar.gz" ./pdfannots2json
 rm ./pdfannots2json
