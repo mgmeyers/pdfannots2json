@@ -20,10 +20,11 @@ import (
 	"github.com/mgmeyers/pdfannots2json/pdfutils"
 	"github.com/mgmeyers/unipdf/v3/extractor"
 	"github.com/mgmeyers/unipdf/v3/model"
+	"github.com/mgmeyers/unipdf/v3/core"
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "v1.0.15"
+const version = "v1.0.16"
 
 var args struct {
 	Version      kong.VersionFlag `short:"v" help:"Display the current version of pdfannots2json"`
@@ -364,7 +365,7 @@ func processAnnotations(
 			comment := ""
 
 			if annotation.Contents != nil {
-				comment = pdfutils.RemoveNul(annotation.Contents.String())
+				comment = pdfutils.RemoveNul(core.MakeString(annotation.Contents.String()).String())
 			}
 
 			annotatedText := str
