@@ -20,6 +20,7 @@ import (
 	"github.com/mgmeyers/pdfannots2json/pdfutils"
 	"github.com/mgmeyers/unipdf/v3/extractor"
 	"github.com/mgmeyers/unipdf/v3/model"
+	"github.com/mgmeyers/unipdf/v3/core"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -364,7 +365,7 @@ func processAnnotations(
 			comment := ""
 
 			if annotation.Contents != nil {
-				comment = pdfutils.RemoveNul(annotation.Contents.String())
+				comment = pdfutils.RemoveNul(core.MakeString(annotation.Contents.String()).String())
 			}
 
 			annotatedText := str
