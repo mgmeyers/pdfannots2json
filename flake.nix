@@ -1,6 +1,10 @@
 {
   description = "pdfannots2json";
 
+  # NixOs commands:
+  #   + Run in dev shell: nix develop
+  #   + Install: nix profile install ./#pdfannots2json
+
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-utils.url = github:numtide/flake-utils;
@@ -12,7 +16,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
         pdfannots2json = pkgs.buildGoModule {
           pname = "pdfannots2json";
-          version = "0.1.0";  # Replace with the actual version
+          version = "1.0.15";  # Replace with the actual version
 
           # Pointing src to the local directory of your project
           src = ./.;  # Replace with the actual path to your local fork
